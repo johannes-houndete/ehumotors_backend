@@ -1,0 +1,72 @@
+
+services:
+
+  # ─── Base de données MySQL ─────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: ehumotors_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-ehu_secret}
+      MYSQL_DATABASE: ehu_motors
+      MYSQL_USER: ${MYSQL_USER:-ehu_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-ehu_pass}
+    volumes:
+      - db_data:/var/lib/mysql
+    # Port non exposé à l'hôte — accès interne Docker uniquement
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-ehu_secret}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - ehumotors_net
+
+  # ─── Backend Django ────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ehumotors_backend
+    restart: unless-stopped
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-change-me-in-production}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ehu_motors
+      DB_USER: ${MYSQL_USER:-ehu_user}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-ehu_pass}
+      KKIAPAY_API_KEY: ${KKIAPAY_API_KEY:-}
+      KKIAPAY_WEBHOOK_SECRET: ${KKIAPAY_WEBHOOK_SECRET:-}
+      KKIAPAY_BASE_URL: "https://api-sandbox.kkiapay.me"
+      ALLOWED_HOSTS: "localhost,127.0.0.1,backend"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    networks:
+      - ehumotors_net
+
+  # ─── Frontend React (Vite build → Nginx) ──────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: ehumotors_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - ehumotors_net
+
+volumes:
+  db_data:
+
+networks:
+  ehumotors_net:
+    driver: bridge
