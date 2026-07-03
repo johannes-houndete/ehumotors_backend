@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
-  LineChart, 
-  Line, 
+  AreaChart, 
+  Area, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { Zap, DollarSign, CheckCircle2, TrendingUp, RefreshCw } from 'lucide-react';
+import { Zap, DollarSign, Plug, TrendingUp, RefreshCw } from 'lucide-react';
 
 const mockChartData = [
   { name: 'Jan', clients: 12000, recharge: 8000 },
@@ -32,7 +32,7 @@ const Dashboard = () => {
   const [metrics, setMetrics] = useState({
     totalSessions: 0,
     totalFCFA: 0,
-    paidSessions: 0,
+    totalEnergieKWh: 0,
   });
 
   const fetchData = async () => {
@@ -54,7 +54,7 @@ const Dashboard = () => {
           setMetrics({
             totalSessions: statsData.global?.total_sessions || 0,
             totalFCFA: statsData.global?.chiffre_affaires_fcfa || 0,
-            paidSessions: statsData.global?.sessions_payees || 0,
+            totalEnergieKWh: (statsData.global?.total_energie_wh || 0) / 1000,
           });
         } catch (statsErr) {
           console.error("Failed to load dashboard stats", statsErr);
@@ -77,11 +77,12 @@ const Dashboard = () => {
     const total = list.length;
     const paidList = list.filter(s => s.statut === 'paye');
     const cash = paidList.reduce((sum, s) => sum + (s.cout_fcfa || 0), 0);
+    const energyWh = list.reduce((sum, s) => sum + (s.energie_wh || 0), 0);
     
     setMetrics({
       totalSessions: total,
       totalFCFA: cash,
-      paidSessions: paidList.length,
+      totalEnergieKWh: energyWh / 1000,
     });
   };
 
@@ -169,11 +170,13 @@ const Dashboard = () => {
 
         <div className="card metric-card metric-card-green animate-fade-in" style={{ animationDelay: '0.15s' }}>
           <div className="metric-info">
-            <span className="metric-label">Payées</span>
-            <span className="metric-value">{metrics.paidSessions}</span>
+            <span className="metric-label">Energie distribuée</span>
+            <span className="metric-value">
+              {metrics.totalEnergieKWh ? metrics.totalEnergieKWh.toFixed(1) : 0} KWh
+            </span>
           </div>
           <div className="metric-icon-container" style={{ color: 'var(--color-success)', backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-            <CheckCircle2 size={24} />
+            <Plug size={24} />
           </div>
         </div>
       </div>
@@ -189,7 +192,13 @@ const Dashboard = () => {
           </div>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={mockChartData}>
+              <AreaChart data={mockChartData}>
+                <defs>
+                  <linearGradient id="colorClients" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--primary-green)" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="var(--primary-green)" stopOpacity={0.01}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis dataKey="name" stroke="var(--text-muted)" style={{ fontSize: '0.75rem' }} />
                 <YAxis stroke="var(--text-muted)" style={{ fontSize: '0.75rem' }} tickFormatter={(v) => `${v/1000}k`} />
@@ -201,9 +210,8 @@ const Dashboard = () => {
                     borderRadius: 'var(--border-radius-sm)'
                   }} 
                 />
-                <Line type="monotone" dataKey="clients" stroke="#6b7280" strokeWidth={2} name="Ce mois-ci" dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="recharge" stroke="var(--primary-blue)" strokeDasharray="4 4" strokeWidth={2} name="Mois dernier" dot={false} />
-              </LineChart>
+                <Area type="monotone" dataKey="clients" stroke="var(--primary-green)" strokeWidth={2} fillOpacity={1} fill="url(#colorClients)" name="Ce mois-ci" />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -250,12 +258,10 @@ const Dashboard = () => {
             <table className="premium-table">
               <thead>
                 <tr>
-                  <th>Client / Moto</th>
-                  <th>Date & Heure</th>
-                  <th>Niveau Batterie</th>
-                  <th>Énergie (Wh)</th>
+                  <th>Client</th>
+                  <th>Date</th>
                   <th>Montant</th>
-                  <th>Statut</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -263,17 +269,15 @@ const Dashboard = () => {
                   <tr key={session.id}>
                     <td>
                       <div style={{ fontWeight: 600, color: 'var(--text-heading)' }}>
-                        {session.moto_chassis || `Moto #${session.moto}`}
+                        {session.client_nom || `Client #${session.moto}`}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        Client #{session.moto}
-                      </div>
+                      {session.moto_chassis && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {session.moto_chassis}
+                        </div>
+                      )}
                     </td>
                     <td>{formatDate(session.date_heure)}</td>
-                    <td style={{ fontWeight: 500 }}>
-                      {session.pct_depart}% &rarr; {session.pct_cible}%
-                    </td>
-                    <td>{session.energie_wh ? `${session.energie_wh} Wh` : '-'}</td>
                     <td style={{ fontWeight: 700, color: 'var(--text-heading)' }}>
                       {formatPrice(session.cout_fcfa || 0)}
                     </td>

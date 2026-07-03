@@ -24,7 +24,8 @@ const History = () => {
   const [kpis, setKpis] = useState({
     total: 87,
     paid: 82,
-    collected: 120630
+    collected: 120630,
+    energyKWh: 256
   });
 
   const fetchHistory = async () => {
@@ -56,19 +57,22 @@ const History = () => {
       const paidSessions = results.filter(s => s.statut === 'paye');
       const paidCount = paidSessions.length;
       const collected = paidSessions.reduce((sum, s) => sum + (s.cout_fcfa || 0), 0);
+      const energyWh = results.reduce((sum, s) => sum + (s.energie_wh || 0), 0);
 
       // Re-adjust stats: if we are using mocks or have empty records, fallback to mockup figures
       if (results.length > 0) {
         setKpis({
           total: total,
           paid: paidCount,
-          collected: collected
+          collected: collected,
+          energyKWh: energyWh / 1000
         });
       } else {
         setKpis({
           total: 0,
           paid: 0,
-          collected: 0
+          collected: 0,
+          energyKWh: 0
         });
       }
     } catch (err) {
@@ -103,7 +107,8 @@ const History = () => {
       setKpis({
         total: 87,
         paid: 82,
-        collected: 120630
+        collected: 120630,
+        energyKWh: 256
       });
       setTotalCount(2);
       setTotalPages(1);
@@ -221,7 +226,7 @@ const History = () => {
       </form>
 
       {/* Metrics Row */}
-      <div className="metrics-grid">
+      <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
         <div className="card metric-card animate-fade-in" style={{ animationDelay: '0.05s' }}>
           <div className="metric-info">
             <span className="metric-label">Sessions</span>
@@ -240,6 +245,13 @@ const History = () => {
           <div className="metric-info">
             <span className="metric-label">FCFA Encaissés</span>
             <span className="metric-value">{formatPrice(kpis.collected).replace(' FCFA', '')}</span>
+          </div>
+        </div>
+
+        <div className="card metric-card animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <div className="metric-info">
+            <span className="metric-label">Energie</span>
+            <span className="metric-value" style={{ color: 'var(--primary-blue)' }}>{kpis.energyKWh ? kpis.energyKWh.toFixed(1) : 0} KWh</span>
           </div>
         </div>
       </div>

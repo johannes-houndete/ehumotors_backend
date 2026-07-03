@@ -11,7 +11,7 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { BarChart3, TrendingUp, RefreshCw, Activity, ArrowUpRight } from 'lucide-react';
+import { BarChart3, TrendingUp, RefreshCw, Activity, ArrowUpRight, CheckCircle2, Plug } from 'lucide-react';
 
 const mockEvolutionData = [
   { name: 'S1', value: 12 },
@@ -44,6 +44,7 @@ const Statistics = () => {
   const [period, setPeriod] = useState('mois');
   const [stats, setStats] = useState({
     sessions: 22,
+    totalEnergieWh: 33671,
     collected: 56050,
     cancelled: 2,
     paid: 20
@@ -57,6 +58,7 @@ const Statistics = () => {
         const data = await response.json();
         setStats({
           sessions: data.global?.total_sessions || 22,
+          totalEnergieWh: data.global?.total_energie_wh || 33671,
           collected: data.global?.chiffre_affaires_fcfa || 56050,
           cancelled: data.global?.sessions_echec || 2,
           paid: data.global?.sessions_payees || 20
@@ -140,7 +142,7 @@ const Statistics = () => {
       </div>
 
       {/* Top Stats Cards */}
-      <div className="metrics-grid">
+      <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
         <div className="card metric-card metric-card-green animate-fade-in" style={{ animationDelay: '0.05s' }}>
           <div className="metric-info">
             <span className="metric-label">Sessions</span>
@@ -151,12 +153,22 @@ const Statistics = () => {
           </div>
         </div>
 
+        <div className="card metric-card animate-fade-in" style={{ animationDelay: '0.08s' }}>
+          <div className="metric-info">
+            <span className="metric-label">Energie</span>
+            <span className="metric-value">{new Intl.NumberFormat('fr-FR').format(stats.totalEnergieWh)} Wh</span>
+          </div>
+          <div className="metric-icon-container" style={{ color: 'var(--primary-blue)', backgroundColor: 'rgba(0, 173, 239, 0.1)' }}>
+            <Plug size={20} />
+          </div>
+        </div>
+
         <div className="card metric-card animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <div className="metric-info">
             <span className="metric-label">FCFA Encaissés</span>
             <span className="metric-value">{formatPrice(stats.collected).replace(' FCFA', '')}</span>
           </div>
-          <div className="metric-icon-container" style={{ color: 'var(--primary-blue)', backgroundColor: 'rgba(0, 173, 239, 0.1)' }}>
+          <div className="metric-icon-container" style={{ color: 'var(--primary-green)', backgroundColor: 'rgba(2, 160, 91, 0.1)' }}>
             <ArrowUpRight size={20} />
           </div>
         </div>
@@ -267,24 +279,5 @@ const Statistics = () => {
     </div>
   );
 };
-
-// Help helper
-const CheckCircle2 = ({ size, className }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-    <path d="m9 12 2 2 4-4" />
-  </svg>
-);
 
 export default Statistics;

@@ -33,7 +33,7 @@ const AppContent = () => {
       case 'new-session':
         return isAgent ? <NewSession /> : <Dashboard />;
       case 'statistics':
-        return isAdmin ? <Statistics /> : <Dashboard />;
+        return <Statistics />;
       case 'history':
         return <History />;
       case 'sessions':

@@ -201,7 +201,7 @@ const NewSession = () => {
         {/* Left Columns - Wizard Steps */}
         <div className="wizard-steps">
           {/* Step 1: Identification */}
-          <div className={`wizard-step ${client ? '' : 'active'}`}>
+          <div className={`wizard-step ${client ? 'completed' : 'active'}`}>
             <div className="step-header">
               <div className="step-number">1</div>
               <h3 className="step-title">Identification du client</h3>
@@ -211,7 +211,7 @@ const NewSession = () => {
               <input
                 type="text"
                 className="form-control"
-                placeholder="Entrez le numéro de châssis (ex: EHU-XYZ)"
+                placeholder="Entrez le numéro de châssis (ex: WTKB16404S1000370)"
                 value={chassis}
                 onChange={(e) => setChassis(e.target.value)}
                 disabled={searching}
@@ -251,7 +251,7 @@ const NewSession = () => {
           </div>
 
           {/* Step 2: Battery Settings */}
-          <div className={`wizard-step ${client && pctCible === 100 ? 'active' : ''}`}>
+          <div className={`wizard-step ${client ? (momoNumber ? 'completed' : 'active') : ''}`}>
             <div className="step-header">
               <div className="step-number">2</div>
               <h3 className="step-title">Niveau de la batterie</h3>

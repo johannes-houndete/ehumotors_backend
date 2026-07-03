@@ -32,12 +32,15 @@ const Login = () => {
     <div className="login-container">
       <div className="login-card animate-fade-in">
         <div className="login-header">
-          <div className="login-logo" style={{ justifyContent: 'center' }}>
+          <div className="login-logo" style={{ justifyContent: 'center', marginBottom: '8px' }}>
             <img
               src="/logo.png"
               alt="EhuMotors"
               style={{ height: '52px', width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
             />
+          </div>
+          <div className="login-header-subtitle">
+            Plateforme de gestion des stations
           </div>
         </div>
 
@@ -71,7 +74,7 @@ const Login = () => {
                   id="identifier"
                   type="text"
                   className="form-control"
-                  placeholder="ex: admin@ehumotors.com"
+                  placeholder="ex: Godomey"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
@@ -113,7 +116,7 @@ const Login = () => {
           </form>
           
           <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            ID démo admin : <strong style={{ color: 'var(--text-main)' }}>admin@ehumotors.com</strong> / <strong style={{ color: 'var(--text-main)' }}>password123</strong>
+            IDs démo : <strong style={{ color: 'var(--text-main)' }}>vodje@ehumotors.com</strong> (Vodjè) ou <strong style={{ color: 'var(--text-main)' }}>godomey@ehumotors.com</strong> (Godomey) | mot de passe : <strong style={{ color: 'var(--text-main)' }}>password123</strong>
           </div>
         </div>
       </div>

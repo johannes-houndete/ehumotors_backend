@@ -5,7 +5,8 @@ import {
   PlusCircle, 
   BarChart3, 
   History, 
-  LogOut 
+  LogOut,
+  Settings
 } from 'lucide-react';
 
 const Sidebar = ({ activePage, setActivePage }) => {
@@ -47,13 +48,13 @@ const Sidebar = ({ activePage, setActivePage }) => {
             </button>
           )}
 
-          {isAdmin && (
+          {(isAgent || isAdmin) && (
             <button 
               className={`sidebar-item btn-secondary ${activePage === 'statistics' ? 'active' : ''}`}
               onClick={() => handleNav('statistics')}
             >
               <BarChart3 size={18} />
-              <span>Statistiques</span>
+              <span>Statistique</span>
             </button>
           )}
 
@@ -70,6 +71,15 @@ const Sidebar = ({ activePage, setActivePage }) => {
       </div>
 
       <div className="sidebar-footer">
+        <button 
+          className={`sidebar-item btn-secondary ${activePage === 'settings' ? 'active' : ''}`}
+          onClick={() => handleNav('settings')}
+          style={{ width: '100%', border: 'none', background: 'none', marginBottom: '8px' }}
+        >
+          <Settings size={18} />
+          <span>Settings</span>
+        </button>
+
         <button 
           className="sidebar-item btn-secondary" 
           onClick={logout}
