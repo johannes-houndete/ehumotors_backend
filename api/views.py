@@ -384,10 +384,11 @@ class UtilisateurViewSet(viewsets.ModelViewSet):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class DashboardStatsView(APIView):
-    permission_classes = [IsAuthenticated, IsAdmin]
+    permission_classes = [IsAuthenticated, IsAdminOrAgent]
 
     def get(self, request):
         periode = request.query_params.get('periode', 'mois')
+        user_id, role, station_id = _get_user_from_token(request)
 
         now = timezone.now()
         if periode == 'jour':
@@ -399,6 +400,8 @@ class DashboardStatsView(APIView):
             debut = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
         sessions_qs = Sessions.objects.filter(date_heure__gte=debut)
+        if role == 'agent':
+            sessions_qs = sessions_qs.filter(station_id=station_id)
 
         agregats = sessions_qs.aggregate(
             total_sessions=Count('id'),
