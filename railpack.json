@@ -1,0 +1,7 @@
+{
+  "packages": [
+    "default-libmysqlclient-dev",
+    "pkg-config",
+    "gcc"
+  ]
+}
