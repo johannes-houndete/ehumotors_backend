@@ -60,13 +60,28 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_NAME', 'ehu_motors'),
-        'USER': os.environ.get('DB_USER', 'root'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
-        'PORT': os.environ.get('DB_PORT', '3306'),
+        'NAME': os.environ.get('DB_NAME') or os.environ.get('MYSQL_DATABASE', 'ehu_motors'),
+        'USER': os.environ.get('DB_USER') or os.environ.get('MYSQL_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD') or os.environ.get('MYSQL_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST') or os.environ.get('MYSQL_HOST', '127.0.0.1'),
+        'PORT': os.environ.get('DB_PORT') or os.environ.get('MYSQL_PORT', '3306'),
     }
 }
+
+_DB_URL = os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL') or ''
+
+if _DB_URL:
+    import re
+    _match = re.match(r'mysql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', _DB_URL)
+    if _match:
+        DATABASES['default'] = {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': _match.group(5),
+            'USER': _match.group(1),
+            'PASSWORD': _match.group(2),
+            'HOST': _match.group(3),
+            'PORT': _match.group(4),
+        }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
