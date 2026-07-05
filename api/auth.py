@@ -1,8 +1,14 @@
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework import serializers
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from .models import Utilisateurs
 import bcrypt
+
 
 class CustomTokenObtainSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -41,9 +47,6 @@ class CustomTokenObtainSerializer(serializers.Serializer):
             }
         }
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -52,3 +55,33 @@ class LoginView(APIView):
         serializer = CustomTokenObtainSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data)
+
+
+class EhuTokenRefreshView(APIView):
+    """
+    Vue de refresh token personnalisée qui évite la recherche dans auth.User.
+    SimpleJWT tente par défaut de valider le user_id via django.contrib.auth.User,
+    ce qui lève un 500 car on utilise la table `utilisateurs`.
+    Ici on décode le refresh token et on génère un nouveau access token directement.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        refresh_token = request.data.get('refresh')
+        if not refresh_token:
+            return Response({'error': 'Refresh token requis.'}, status=400)
+
+        try:
+            token = RefreshToken(refresh_token)
+
+            # Vérifier que l'utilisateur est toujours actif en DB
+            user_id = token.get('user_id')
+            try:
+                Utilisateurs.objects.get(pk=user_id, actif=1)
+            except Utilisateurs.DoesNotExist:
+                return Response({'error': 'Utilisateur introuvable ou inactif.'}, status=401)
+
+            return Response({'access': str(token.access_token)})
+
+        except TokenError as e:
+            return Response({'error': str(e)}, status=401)

@@ -67,7 +67,7 @@ class SessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sessions
         fields = '__all__'
-        read_only_fields = ['energie_wh', 'cout_fcfa', 'statut', 'date_heure']
+        read_only_fields = ['energie_wh', 'cout_fcfa', 'statut', 'date_heure', 'agent', 'station', 'tarif']
 
 
 class PaiementSerializer(serializers.ModelSerializer):

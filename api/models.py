@@ -15,7 +15,7 @@ class Clients(models.Model):
     created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'clients'
 
 
@@ -25,7 +25,7 @@ class Motos(models.Model):
     modele = models.CharField(max_length=60, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'motos'
 
 
@@ -38,7 +38,7 @@ class Paiements(models.Model):
     date_heure = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'paiements'
 
 
@@ -55,7 +55,7 @@ class Sessions(models.Model):
     date_heure = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'sessions'
 
 
@@ -66,7 +66,7 @@ class Stations(models.Model):
     created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'stations'
 
 
@@ -77,7 +77,7 @@ class Tarifs(models.Model):
     date_modif = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'tarifs'
 
 
@@ -105,5 +105,5 @@ class Utilisateurs(models.Model):
         return bool(self.actif)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'utilisateurs'

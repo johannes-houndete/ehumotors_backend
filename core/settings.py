@@ -9,6 +9,15 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load .env file for local development
+_env_file = BASE_DIR / '.env'
+if _env_file.exists():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(_env_file)
+    except ImportError:
+        pass
+
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-$cf2)81e1^t89mfkc*6w6u7%l6)fiq@#2g5dsbzxfz7d3211t7')
 
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
@@ -58,14 +67,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
+_DB_HOST = os.environ.get('DB_HOST', '127.0.0.1')
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.environ.get('DB_NAME', 'ehu_motors'),
         'USER': os.environ.get('DB_USER', 'root'),
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
-        'PORT': os.environ.get('DB_PORT', '3306'),
+        'HOST': _DB_HOST,
+        'PORT': os.environ.get('DB_PORT', '3306') if not _DB_HOST.startswith('/') else '',
     }
 }
 

@@ -1,0 +1,14 @@
+env/
+node-v*/
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+db.sqlite3
+.DS_Store
+.git/
+.gitignore
+.dockerignore
+frontend/dist/
+frontend/node_modules/
+*.log

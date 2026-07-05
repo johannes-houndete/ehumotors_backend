@@ -1,5 +1,14 @@
 node-v*/
 node_modules/
 *.log
-.envnode-v22.12.0-linux-x64/
+.env
 node-v22.12.0-linux-x64/
+env/
+**/__pycache__/
+*.pyc
+*.pyo
+db.sqlite3
+frontend/dist/
+.DS_Store
+*.egg-info/
+staticfiles/

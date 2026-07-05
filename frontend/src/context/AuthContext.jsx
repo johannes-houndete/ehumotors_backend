@@ -68,6 +68,30 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('ehu_refresh_token');
   };
 
+  let refreshPromise = null;
+
+  const refreshToken = async () => {
+    const storedRefresh = localStorage.getItem('ehu_refresh_token');
+    if (!storedRefresh) {
+      throw new Error('No refresh token');
+    }
+    const response = await fetch(apiUrl('/api/auth/refresh/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh: storedRefresh }),
+    });
+    if (!response.ok) {
+      throw new Error('Refresh failed');
+    }
+    const data = await response.json();
+    setToken(data.access);
+    localStorage.setItem('ehu_token', data.access);
+    if (data.refresh) {
+      localStorage.setItem('ehu_refresh_token', data.refresh);
+    }
+    return data.access;
+  };
+
   // Pre-configured fetch helper that includes authorization header
   const apiFetch = async (url, options = {}) => {
     const headers = {
@@ -79,15 +103,28 @@ export const AuthProvider = ({ children }) => {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(apiUrl(url), {
+    let response = await fetch(apiUrl(url), {
       ...options,
       headers,
     });
 
     if (response.status === 401) {
-      // Auto-logout on unauthorized / token expired
-      logout();
-      throw new Error('Session expirée, veuillez vous reconnecter.');
+      try {
+        if (!refreshPromise) {
+          refreshPromise = refreshToken().finally(() => {
+            refreshPromise = null;
+          });
+        }
+        const newToken = await refreshPromise;
+        headers['Authorization'] = `Bearer ${newToken}`;
+        response = await fetch(apiUrl(url), {
+          ...options,
+          headers,
+        });
+      } catch {
+        logout();
+        throw new Error('Session expirée, veuillez vous reconnecter.');
+      }
     }
 
     return response;
