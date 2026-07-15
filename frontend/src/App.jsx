@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard';
 import NewSession from './pages/NewSession';
 import Statistics from './pages/Statistics';
 import History from './pages/History';
+import Agents from './pages/Agents';
+import Tarification from './pages/Tarification';
 import './App.css';
 
 const AppContent = () => {
@@ -36,6 +38,10 @@ const AppContent = () => {
         return <Statistics />;
       case 'history':
         return <History />;
+      case 'agents':
+        return isAdmin ? <Agents /> : <Dashboard />;
+      case 'tarification':
+        return isAdmin ? <Tarification /> : <Dashboard />;
       case 'sessions':
       default:
         return <Dashboard />;

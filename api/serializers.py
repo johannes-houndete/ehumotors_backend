@@ -40,9 +40,14 @@ class UtilisateurCreateSerializer(serializers.ModelSerializer):
         fields = ['id', 'nom', 'email', 'role', 'station', 'actif', 'password']
 
     def create(self, validated_data):
+        from django.utils import timezone
         password = validated_data.pop('password')
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(rounds=12))
         validated_data['mot_de_passe'] = hashed.decode('utf-8')
+        # Defaults
+        validated_data.setdefault('actif', 1)
+        validated_data.setdefault('role', 'agent')
+        validated_data.setdefault('created_at', timezone.now())
         return Utilisateurs.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
@@ -56,11 +61,14 @@ class UtilisateurCreateSerializer(serializers.ModelSerializer):
         return instance
 
 
+
 class TarifSerializer(serializers.ModelSerializer):
+    admin_nom = serializers.CharField(source='admin.nom', read_only=True)
+
     class Meta:
         model = Tarifs
         fields = '__all__'
-        read_only_fields = ['date_modif']
+        read_only_fields = ['admin', 'date_modif']
 
 
 class SessionSerializer(serializers.ModelSerializer):

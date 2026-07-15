@@ -34,6 +34,8 @@ def _get_user_from_token(request):
     )
 
 
+import json
+
 class Tier:
     def __init__(self, min_val: int, max_val: int, rate: float):
         self.min = min_val
@@ -41,12 +43,29 @@ class Tier:
         self.rate = rate
 
 
-TIERS = [
-    Tier(5, 10, 20.0),
-    Tier(10, 20, 15.0),
-    Tier(20, 90, 12.0),
-    Tier(90, 100, 15.0),
-]
+def get_current_pricing():
+    try:
+        current_tarif = Tarifs.objects.order_by('-date_modif').first()
+        if current_tarif and current_tarif.regle:
+            config = json.loads(current_tarif.regle)
+            if isinstance(config, dict) and "tiers" in config:
+                tiers = []
+                for t in config["tiers"]:
+                    tiers.append(Tier(int(t["min"]), int(t["max"]), float(t["rate"])))
+                penalty_threshold = float(config.get("penalty_threshold", 5.0))
+                penalty_value = float(config.get("penalty_value", 250.0))
+                return tiers, penalty_threshold, penalty_value
+    except Exception as e:
+        print("Failed to load custom pricing, falling back to default:", e)
+    
+    # Fallback to default hardcoded tiers
+    default_tiers = [
+        Tier(5, 10, 20.0),
+        Tier(10, 20, 15.0),
+        Tier(20, 90, 12.0),
+        Tier(90, 100, 15.0),
+    ]
+    return default_tiers, 5.0, 250.0
 
 
 def compute_price(start: float, target: float) -> float:
@@ -56,14 +75,15 @@ def compute_price(start: float, target: float) -> float:
     if target <= start:
         return 0.0
 
+    tiers, penalty_threshold, penalty_value = get_current_pricing()
     total = 0.0
 
-    # Pénalité fixe si niveau initial < 5%
-    if start < 5.0:
-        total += 250.0
+    # Pénalité fixe si niveau initial < penalty_threshold
+    if start < penalty_threshold:
+        total += penalty_value
 
     # Calcul par paliers
-    for tier in TIERS:
+    for tier in tiers:
         if tier.max <= start:
             continue
 
@@ -76,6 +96,7 @@ def compute_price(start: float, target: float) -> float:
             total += delta * tier.rate
 
     return total
+
 
 
 def _calculer_cout(pct_depart: float, pct_cible: float, capacite_wh: float, prix_par_wh: float):

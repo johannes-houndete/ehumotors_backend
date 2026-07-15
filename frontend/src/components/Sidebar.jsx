@@ -6,7 +6,10 @@ import {
   BarChart3, 
   History, 
   LogOut,
-  Settings
+  Settings,
+  Users,
+  DollarSign,
+  FileText
 } from 'lucide-react';
 
 const Sidebar = ({ activePage, setActivePage }) => {
@@ -28,45 +31,106 @@ const Sidebar = ({ activePage, setActivePage }) => {
         </div>
 
         <nav className="sidebar-menu">
-          <div className="sidebar-section-title">Menu Principal</div>
-          
-          <button 
-            className={`sidebar-item btn-secondary ${activePage === 'sessions' ? 'active' : ''}`}
-            onClick={() => handleNav('sessions')}
-          >
-            <Zap size={18} />
-            <span>Sessions</span>
-          </button>
-
+          {/* Agent Sidebar Navigation */}
           {isAgent && (
-            <button 
-              className={`sidebar-item btn-secondary ${activePage === 'new-session' ? 'active' : ''}`}
-              onClick={() => handleNav('new-session')}
-            >
-              <PlusCircle size={18} />
-              <span>Nouvelle session</span>
-            </button>
+            <>
+              <div className="sidebar-section-title">Menu Principal</div>
+              
+              <button 
+                className={`sidebar-item btn-secondary ${activePage === 'sessions' ? 'active' : ''}`}
+                onClick={() => handleNav('sessions')}
+              >
+                <Zap size={18} />
+                <span>Sessions</span>
+              </button>
+
+              <button 
+                className={`sidebar-item btn-secondary ${activePage === 'new-session' ? 'active' : ''}`}
+                onClick={() => handleNav('new-session')}
+              >
+                <PlusCircle size={18} />
+                <span>Nouvelle session</span>
+              </button>
+
+              <button 
+                className={`sidebar-item btn-secondary ${activePage === 'statistics' ? 'active' : ''}`}
+                onClick={() => handleNav('statistics')}
+              >
+                <BarChart3 size={18} />
+                <span>Statistiques</span>
+              </button>
+
+              <div className="sidebar-section-title">Archives</div>
+              
+              <button 
+                className={`sidebar-item btn-secondary ${activePage === 'history' ? 'active' : ''}`}
+                onClick={() => handleNav('history')}
+              >
+                <History size={18} />
+                <span>Historique</span>
+              </button>
+            </>
           )}
 
-          {(isAgent || isAdmin) && (
-            <button 
-              className={`sidebar-item btn-secondary ${activePage === 'statistics' ? 'active' : ''}`}
-              onClick={() => handleNav('statistics')}
-            >
-              <BarChart3 size={18} />
-              <span>Statistique</span>
-            </button>
-          )}
 
-          <div className="sidebar-section-title">Archives</div>
-          
-          <button 
-            className={`sidebar-item btn-secondary ${activePage === 'history' ? 'active' : ''}`}
-            onClick={() => handleNav('history')}
-          >
-            <History size={18} />
-            <span>Historique</span>
-          </button>
+          {/* Admin Sidebar Navigation */}
+          {isAdmin && (
+            <>
+              <div className="sidebar-section-title">SUPERVISION</div>
+              
+              <button 
+                className={`sidebar-item btn-secondary ${activePage === 'sessions' ? 'active' : ''}`}
+                onClick={() => handleNav('sessions')}
+              >
+                <Zap size={18} />
+                <span>Dashboard</span>
+              </button>
+
+              <button 
+                className={`sidebar-item btn-secondary ${activePage === 'statistics' ? 'active' : ''}`}
+                onClick={() => handleNav('statistics')}
+              >
+                <BarChart3 size={18} />
+                <span>Statistiques</span>
+              </button>
+
+              <button 
+                className={`sidebar-item btn-secondary ${activePage === 'history' ? 'active' : ''}`}
+                onClick={() => handleNav('history')}
+              >
+                <History size={18} />
+                <span>Sessions</span>
+              </button>
+
+              <div className="sidebar-section-title">GESTION</div>
+
+              <button 
+                className={`sidebar-item btn-secondary ${activePage === 'agents' ? 'active' : ''}`}
+                onClick={() => handleNav('agents')}
+              >
+                <Users size={18} />
+                <span>Agents</span>
+              </button>
+
+              <button 
+                className={`sidebar-item btn-secondary ${activePage === 'tarification' ? 'active' : ''}`}
+                onClick={() => handleNav('tarification')}
+              >
+                <DollarSign size={18} />
+                <span>Tarification</span>
+              </button>
+
+              <div className="sidebar-section-title">DONNÉES</div>
+
+              <button 
+                className={`sidebar-item btn-secondary ${activePage === 'reports' ? 'active' : ''}`}
+                onClick={() => handleNav('reports')}
+              >
+                <FileText size={18} />
+                <span>Rapports</span>
+              </button>
+            </>
+          )}
         </nav>
       </div>
 
