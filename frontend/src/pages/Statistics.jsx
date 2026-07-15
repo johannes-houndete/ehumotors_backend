@@ -239,13 +239,19 @@ const Statistics = () => {
           </div>
           <div className="radial-charts-container">
             <div className="radial-chart-item">
-              <CircularProgress percentage={81} strokeColor="var(--primary-green)" />
-              <span className="radial-chart-label">Sessions payées</span>
+              <CircularProgress 
+                percentage={stats.sessions > 0 ? Math.round((stats.paid / stats.sessions) * 100) : 0} 
+                strokeColor="var(--primary-green)" 
+              />
+              <span className="radial-chart-label">Sessions payées (%)</span>
             </div>
             
             <div className="radial-chart-item">
-              <CircularProgress percentage={62} strokeColor="var(--primary-blue)" />
-              <span className="radial-chart-label">Énergie distribuée</span>
+              <CircularProgress 
+                percentage={stats.sessions > 0 ? Math.round((stats.paid / stats.sessions) * 100) : 0} 
+                strokeColor="var(--primary-blue)" 
+              />
+              <span className="radial-chart-label">Taux de succès (%)</span>
             </div>
           </div>
         </div>

@@ -77,40 +77,16 @@ const History = () => {
       }
     } catch (err) {
       console.error(err);
-      setError('Erreur réseau. Utilisation des données de simulation de l\'historique.');
+      setError('Erreur réseau lors du chargement de l\'historique.');
       
-      // Mock fallback data representing the exact items in mockup 4
-      setSessions([
-        {
-          id: 1,
-          date_heure: '2026-06-03T08:36:00',
-          moto_chassis: 'EHU-7729-X',
-          client_nom: 'Koffi MENSAH',
-          pct_depart: 20,
-          pct_cible: 100,
-          energie_wh: 3532,
-          cout_fcfa: 2000,
-          statut: 'paye'
-        },
-        {
-          id: 2,
-          date_heure: '2026-06-03T09:21:00',
-          moto_chassis: 'EHU-1948-B',
-          client_nom: 'Amara Diallo',
-          pct_depart: 45,
-          pct_cible: 100,
-          energie_wh: 2428,
-          cout_fcfa: 1450,
-          statut: 'paye'
-        }
-      ]);
+      setSessions([]);
       setKpis({
-        total: 87,
-        paid: 82,
-        collected: 120630,
-        energyKWh: 256
+        total: 0,
+        paid: 0,
+        collected: 0,
+        energyKWh: 0
       });
-      setTotalCount(2);
+      setTotalCount(0);
       setTotalPages(1);
     } finally {
       setLoading(false);

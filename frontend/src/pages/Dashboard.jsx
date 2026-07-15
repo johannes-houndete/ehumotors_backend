@@ -28,6 +28,7 @@ const Dashboard = () => {
   const { apiFetch, isAdmin } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [parStation, setParStation] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -37,7 +38,7 @@ const Dashboard = () => {
     totalFCFA: 0,
     totalEnergieKWh: 0,
     successRate: 82,
-    activeAgents: "2/2"
+    activeAgents: "0/0"
   });
 
   const fetchData = async () => {
@@ -50,7 +51,20 @@ const Dashboard = () => {
       const sessionsList = sessionsData.results || sessionsData || [];
       setSessions(sessionsList.slice(0, 10)); // Take top 10 for dashboard
 
-      // 2. Compute metrics
+      // 2. Fetch agents list if admin to display real agent names
+      let agentsList = [];
+      if (isAdmin) {
+        try {
+          const agentsResponse = await apiFetch('/api/utilisateurs/');
+          const agentsData = await agentsResponse.json();
+          agentsList = (agentsData.results || agentsData || []).filter(u => u.role === 'agent');
+          setAgents(agentsList);
+        } catch (err) {
+          console.error("Failed to load agents list", err);
+        }
+      }
+
+      // 3. Compute metrics
       if (isAdmin) {
         // Admin gets global metrics from stats endpoint
         try {
@@ -62,12 +76,15 @@ const Dashboard = () => {
           const paid = statsData.global?.sessions_payees || 0;
           const success = total > 0 ? Math.round((paid / total) * 100) : 82;
 
+          const totalAgentsCount = agentsList.length;
+          const activeAgentsCount = agentsList.filter(a => a.actif).length;
+
           setMetrics({
             totalSessions: total,
             totalFCFA: statsData.global?.chiffre_affaires_fcfa || 0,
             totalEnergieKWh: (statsData.global?.total_energie_wh || 0) / 1000,
             successRate: success,
-            activeAgents: "2/2"
+            activeAgents: `${activeAgentsCount}/${totalAgentsCount}`
           });
         } catch (statsErr) {
           console.error("Failed to load dashboard stats", statsErr);
@@ -230,14 +247,17 @@ const Dashboard = () => {
                 </thead>
                 <tbody>
                   {parStation.map((station, idx) => {
-                    const mockAgents = ["Jean ADJOVI", "Lucien HOUNSOU", "Koffi Mensah"];
+                    const assignedAgents = agents
+                      .filter(a => a.station === station.station__id)
+                      .map(a => a.nom);
+                    const agentName = assignedAgents.length > 0 ? assignedAgents.join(', ') : 'Aucun';
                     return (
                       <tr key={idx}>
                         <td style={{ fontWeight: 'bold' }}>{station.station__nom}</td>
                         <td>{station.nb_sessions}</td>
                         <td>{new Intl.NumberFormat('fr-FR').format(station.ca_fcfa || 0)}</td>
                         <td>{((station.energie_wh || 0) / 1000).toFixed(1)} KWh</td>
-                        <td style={{ color: 'var(--text-muted)' }}>{mockAgents[idx % mockAgents.length]}</td>
+                        <td style={{ color: 'var(--text-muted)' }}>{agentName}</td>
                       </tr>
                     );
                   })}
