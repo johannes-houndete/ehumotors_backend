@@ -2,6 +2,7 @@ node-v*/
 node_modules/
 *.log
 .env
+.env.seed
 node-v22.12.0-linux-x64/
 env/
 **/__pycache__/
