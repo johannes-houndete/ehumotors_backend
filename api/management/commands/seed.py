@@ -70,7 +70,18 @@ class Command(BaseCommand):
         if created:
             self.stdout.write(self.style.SUCCESS(f"Admin created: {admin_email}"))
         else:
-            self.stdout.write(f"Admin already exists: {admin_email}")
+            updated = False
+            if admin_user.role != "admin":
+                admin_user.role = "admin"
+                updated = True
+            if admin_user.actif != 1:
+                admin_user.actif = 1
+                updated = True
+            if updated:
+                admin_user.save()
+                self.stdout.write(self.style.SUCCESS(f"Admin role/status synchronized: {admin_email}"))
+            else:
+                self.stdout.write(f"Admin already exists: {admin_email}")
 
         # 3. Seed Default Tarif if not exists
         if not Tarifs.objects.exists():
@@ -118,7 +129,22 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(self.style.SUCCESS(f"Agent created: {agent_email} (Station: {station.nom if station else 'None'})"))
             else:
-                self.stdout.write(f"Agent already exists: {agent_email}")
+                # Force synchronization of critical properties (role, active status, station)
+                updated = False
+                if agent_user.role != "agent":
+                    agent_user.role = "agent"
+                    updated = True
+                if agent_user.station != station:
+                    agent_user.station = station
+                    updated = True
+                if agent_user.actif != 1:
+                    agent_user.actif = 1
+                    updated = True
+                if updated:
+                    agent_user.save()
+                    self.stdout.write(self.style.SUCCESS(f"Agent synchronized (forced role=agent/station={station.nom if station else 'None'}): {agent_email}"))
+                else:
+                    self.stdout.write(f"Agent already exists: {agent_email}")
             j += 1
 
         self.stdout.write("--- Seeding Completed Successfully ---")
