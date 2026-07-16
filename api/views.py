@@ -446,6 +446,46 @@ class DashboardStatsView(APIView):
             .order_by('-nb_sessions')
         )
 
+        # Temporal evolution (timeseries)
+        from django.db.models import Avg, F
+        from django.db.models.functions import TruncDay, TruncHour
+        
+        if periode == 'jour':
+            trunc_func = TruncHour('date_heure')
+        else:
+            trunc_func = TruncDay('date_heure')
+
+        evolution = (
+            sessions_qs
+            .annotate(label=trunc_func)
+            .values('label')
+            .annotate(
+                nb_sessions=Count('id'),
+                ca_fcfa=Sum('cout_fcfa'),
+                avg_duration_min=Avg(F('pct_cible') - F('pct_depart')) * 0.5
+            )
+            .order_by('label')
+        )
+
+        evolution_serialized = []
+        for item in evolution:
+            if not item['label']:
+                continue
+            lbl = item['label']
+            if periode == 'jour':
+                lbl_str = lbl.strftime('%H:00')
+            elif periode == 'semaine':
+                lbl_str = lbl.strftime('%a')
+            else:
+                lbl_str = lbl.strftime('%d/%m')
+            
+            evolution_serialized.append({
+                'name': lbl_str,
+                'sessions': item['nb_sessions'] or 0,
+                'revenue': float(item['ca_fcfa'] or 0),
+                'duration': round(float(item['avg_duration_min'] or 0) / 60, 2) # in hours
+            })
+
         return Response({
             'periode': periode,
             'date_debut': debut.isoformat(),
@@ -459,4 +499,5 @@ class DashboardStatsView(APIView):
                 'chiffre_affaires_fcfa': round(agregats['total_ca_fcfa'] or 0, 2),
             },
             'par_station': list(par_station),
+            'evolution': evolution_serialized
         })

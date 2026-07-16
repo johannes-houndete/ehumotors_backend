@@ -29,6 +29,7 @@ const Dashboard = () => {
   const [sessions, setSessions] = useState([]);
   const [parStation, setParStation] = useState([]);
   const [agents, setAgents] = useState([]);
+  const [evolutionData, setEvolutionData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -71,6 +72,7 @@ const Dashboard = () => {
           const statsResponse = await apiFetch('/api/dashboard/stats/?periode=mois');
           const statsData = await statsResponse.json();
           setParStation(statsData.par_station || []);
+          setEvolutionData(statsData.evolution || []);
           
           const total = statsData.global?.total_sessions || 0;
           const paid = statsData.global?.sessions_payees || 0;
@@ -318,7 +320,7 @@ const Dashboard = () => {
           </div>
           <div style={{ width: '100%', height: '240px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={mockChartData}>
+              <AreaChart data={evolutionData.length > 0 ? evolutionData : mockChartData}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--primary-blue)" stopOpacity={0.2}/>

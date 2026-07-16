@@ -42,6 +42,7 @@ const Statistics = () => {
   const { apiFetch } = useAuth();
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState('mois');
+  const [evolutionData, setEvolutionData] = useState([]);
   const [stats, setStats] = useState({
     sessions: 22,
     totalEnergieWh: 33671,
@@ -57,12 +58,13 @@ const Statistics = () => {
       if (response.ok) {
         const data = await response.json();
         setStats({
-          sessions: data.global?.total_sessions || 22,
-          totalEnergieWh: data.global?.total_energie_wh || 33671,
-          collected: data.global?.chiffre_affaires_fcfa || 56050,
-          cancelled: data.global?.sessions_echec || 2,
-          paid: data.global?.sessions_payees || 20
+          sessions: data.global?.total_sessions || 0,
+          totalEnergieWh: data.global?.total_energie_wh || 0,
+          collected: data.global?.chiffre_affaires_fcfa || 0,
+          cancelled: data.global?.sessions_echec || 0,
+          paid: data.global?.sessions_payees || 0
         });
+        setEvolutionData(data.evolution || []);
       }
     } catch (err) {
       console.error("Failed to load real stats, using mocks", err);
@@ -212,7 +214,7 @@ const Statistics = () => {
         </div>
         <div className="chart-container" style={{ height: '280px' }}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={mockEvolutionData}>
+            <LineChart data={evolutionData.length > 0 ? evolutionData : mockEvolutionData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
               <XAxis dataKey="name" stroke="var(--text-muted)" style={{ fontSize: '0.75rem' }} />
               <YAxis stroke="var(--text-muted)" style={{ fontSize: '0.75rem' }} />
@@ -224,7 +226,7 @@ const Statistics = () => {
                   borderRadius: 'var(--border-radius-sm)'
                 }} 
               />
-              <Line type="monotone" dataKey="value" stroke="var(--primary-blue)" strokeWidth={3} name="Sessions" dot={{ r: 4, stroke: 'var(--primary-blue)', strokeWidth: 2, fill: 'var(--bg-card)' }} />
+              <Line type="monotone" dataKey="sessions" stroke="var(--primary-blue)" strokeWidth={3} name="Sessions" dot={{ r: 4, stroke: 'var(--primary-blue)', strokeWidth: 2, fill: 'var(--bg-card)' }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -263,7 +265,7 @@ const Statistics = () => {
           </div>
           <div className="chart-container" style={{ height: '240px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mockDurationData}>
+              <BarChart data={evolutionData.length > 0 ? evolutionData : mockDurationData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                 <XAxis dataKey="name" stroke="var(--text-muted)" style={{ fontSize: '0.75rem' }} />
                 <YAxis stroke="var(--text-muted)" style={{ fontSize: '0.75rem' }} unit="h" />
