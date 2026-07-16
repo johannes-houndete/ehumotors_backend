@@ -36,7 +36,10 @@ services:
       DB_NAME: ehu_motors
       DB_USER: ${MYSQL_USER:-ehu_user}
       DB_PASSWORD: ${MYSQL_PASSWORD:-ehu_pass}
+      KKIAPAY_PUBLIC_KEY: ${KKIAPAY_PUBLIC_KEY:-}
       KKIAPAY_API_KEY: ${KKIAPAY_API_KEY:-}
+      KKIAPAY_PRIVATE_KEY: ${KKIAPAY_PRIVATE_KEY:-}
+      KKIAPAY_SECRET_KEY: ${KKIAPAY_SECRET_KEY:-}
       KKIAPAY_WEBHOOK_SECRET: ${KKIAPAY_WEBHOOK_SECRET:-}
       KKIAPAY_BASE_URL: "https://api-sandbox.kkiapay.me"
       ALLOWED_HOSTS: "localhost,127.0.0.1,backend"

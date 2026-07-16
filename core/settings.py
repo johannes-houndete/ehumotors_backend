@@ -132,5 +132,7 @@ CORS_ALLOWED_ORIGINS = [
 # ── KKiaPay Sandbox ───────────────────────────────────────────────────────────
 KKIAPAY_PUBLIC_KEY      = os.environ.get('KKIAPAY_PUBLIC_KEY', '')
 KKIAPAY_API_KEY        = os.environ.get('KKIAPAY_API_KEY', '')
+KKIAPAY_PRIVATE_KEY    = os.environ.get('KKIAPAY_PRIVATE_KEY', '')
+KKIAPAY_SECRET_KEY     = os.environ.get('KKIAPAY_SECRET_KEY', '')
 KKIAPAY_BASE_URL       = os.environ.get('KKIAPAY_BASE_URL', 'https://api-sandbox.kkiapay.me')
 KKIAPAY_WEBHOOK_SECRET = os.environ.get('KKIAPAY_WEBHOOK_SECRET', '')
