@@ -14,6 +14,7 @@ import './App.css';
 const AppContent = () => {
   const { isAuthenticated, isAgent, isAdmin } = useAuth();
   const [activePage, setActivePage] = useState('sessions');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Automatically adjust default page based on user role when logging in
   useEffect(() => {
@@ -25,6 +26,15 @@ const AppContent = () => {
       }
     }
   }, [isAuthenticated, isAgent, isAdmin]);
+
+  // Fermer la sidebar quand la fenêtre s'agrandit (desktop)
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768) setSidebarOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   if (!isAuthenticated) {
     return <Login />;
@@ -50,9 +60,14 @@ const AppContent = () => {
 
   return (
     <div className="app-container">
-      <Sidebar activePage={activePage} setActivePage={setActivePage} />
+      <Sidebar
+        activePage={activePage}
+        setActivePage={setActivePage}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <div className="main-wrapper">
-        <Header />
+        <Header onMenuClick={() => setSidebarOpen(prev => !prev)} />
         <main style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
           {renderActivePage()}
         </main>
@@ -60,6 +75,7 @@ const AppContent = () => {
     </div>
   );
 };
+
 
 const App = () => {
   return (

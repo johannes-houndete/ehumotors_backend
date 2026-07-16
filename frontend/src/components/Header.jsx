@@ -1,17 +1,21 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Sun, Moon, Bell, RotateCcw } from 'lucide-react';
+import { Sun, Moon, Bell, RotateCcw, Menu } from 'lucide-react';
 
-const Header = () => {
+const Header = ({ onMenuClick }) => {
   const { user, theme, toggleTheme } = useAuth();
 
   return (
     <header className="header animate-fade-in">
       <div className="header-brand">
+        {/* Hamburger pour mobile */}
+        <button className="hamburger-btn" onClick={onMenuClick} title="Menu" aria-label="Ouvrir le menu">
+          <Menu size={22} />
+        </button>
         <img
           src="/logo.png"
           alt="EhuMotors"
-          style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
+          className="header-logo"
         />
       </div>
 

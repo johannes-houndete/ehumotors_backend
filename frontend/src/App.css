@@ -26,13 +26,24 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-left: 12px;
+  padding-left: 8px;
   margin-bottom: 40px;
 }
 
 .sidebar-logo img {
-  height: 36px;
+  height: 55px;
   width: auto;
+  max-width: 300px;
+}
+
+/* Brand text shown in sidebar on desktop */
+.sidebar-brand-text {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--primary-green);
+  letter-spacing: -0.02em;
+  flex: 1;
 }
 
 .sidebar-menu {
@@ -245,11 +256,6 @@
   margin-bottom: 32px;
 }
 
-@media (max-width: 1024px) {
-  .charts-grid {
-    grid-template-columns: 1fr;
-  }
-}
 
 .chart-card {
   display: flex;
@@ -300,11 +306,6 @@
   align-items: start;
 }
 
-@media (max-width: 1024px) {
-  .session-grid {
-    grid-template-columns: 1fr;
-  }
-}
 
 .wizard-steps {
   display: flex;
@@ -509,14 +510,6 @@
   margin-bottom: 32px;
 }
 
-@media (max-width: 768px) {
-  .filter-card {
-    grid-template-columns: 1fr;
-  }
-  .filter-card .btn {
-    width: 100%;
-  }
-}
 
 /* Login Page Styling */
 .login-container {
@@ -542,7 +535,7 @@
 }
 
 .login-header {
-  background-color: var(--primary-green);
+  background: linear-gradient(135deg, #0a1628 0%, #0d2d1a 50%, #02a05b 100%);
   color: white;
   padding: 40px 32px;
   text-align: center;
@@ -559,7 +552,7 @@
 }
 
 .login-logo img {
-  height: 40px;
+  height: 55px;
   width: auto;
 }
 
@@ -731,26 +724,279 @@
   color: var(--text-muted);
 }
 
-/* Responsive adjustment for Mobile/Tablet */
-@media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%);
-    transition: transform var(--transition-normal);
-  }
-  
-  .sidebar.open {
-    transform: translateX(0);
+/* ============================================
+   LOGO SIZES — desktop defaults
+   ============================================ */
+.header-logo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.sidebar-logo-img {
+  height: 55px;
+  width: auto;
+  object-fit: contain;
+  max-width: 300px;
+  flex: 1;
+}
+
+/* Bouton hamburger (caché sur desktop) */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+}
+
+.hamburger-btn:hover {
+  background-color: var(--bg-input);
+  color: var(--text-heading);
+}
+
+/* Bouton fermer sidebar (caché sur desktop) */
+.sidebar-close-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-close-btn:hover {
+  background-color: var(--bg-input);
+  color: var(--color-danger);
+}
+
+/* Overlay sombre derrière la sidebar en mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 99;
+  backdrop-filter: blur(2px);
+}
+
+/* ============================================
+   RESPONSIVE — Tablet (≤ 1024px)
+   ============================================ */
+@media (max-width: 1024px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
   }
 
+  .session-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .agents-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ============================================
+   RESPONSIVE — Mobile (≤ 768px)
+   ============================================ */
+@media (max-width: 768px) {
+  /* Sidebar : cachée par défaut, glisse depuis la gauche */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+    z-index: 200;
+    width: min(280px, 85vw);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 40px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Overlay visible sur mobile quand sidebar est ouverte */
+  .sidebar-overlay {
+    display: block;
+  }
+
+  /* Boutons hamburger et fermer visibles sur mobile */
+  .hamburger-btn {
+    display: flex;
+  }
+
+  .sidebar-close-btn {
+    display: flex;
+  }
+
+  /* Décalage contenu supprimé sur mobile */
   .main-wrapper {
     margin-left: 0;
   }
 
+  /* Header réduit */
   .header {
-    padding: 0 20px;
+    padding: 0 16px;
+    height: 60px;
   }
-  
+
+  .header-logo {
+    height: 35px;
+  }
+
+  .header-actions {
+    gap: 10px;
+  }
+
+  .user-name {
+    display: none; /* Masquer nom utilisateur sur très petit écran */
+  }
+
+  /* Page container */
   .page-container {
-    padding: 20px;
+    padding: 16px;
+  }
+
+  /* Stats cards : 1 colonne */
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Charts */
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Agents */
+  .agents-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Tableau responsive */
+  .table-card {
+    overflow-x: auto;
+  }
+
+  /* Filtres */
+  .filter-card {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-card .btn {
+    width: 100%;
+  }
+
+  /* Session grid */
+  .session-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Modales */
+  .modal {
+    padding: 12px;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-height: 95vh;
+    border-radius: var(--border-radius-md);
+  }
+
+  .modal-header {
+    padding: 16px 20px;
+  }
+
+  .modal-body {
+    padding: 16px 20px;
+  }
+
+  .modal-footer {
+    padding: 12px 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .modal-footer .btn {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Tarification */
+  .tarif-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Radial charts en colonne */
+  .radial-charts-container {
+    flex-direction: column;
+    height: auto;
+    gap: 24px;
+  }
+
+  /* Login */
+  .login-card {
+    width: 100%;
+    border-radius: var(--border-radius-md);
+  }
+
+  .login-header {
+    padding: 28px 20px;
+  }
+
+  .login-body {
+    padding: 28px 20px;
   }
 }
+
+/* ============================================
+   RESPONSIVE — Small mobile (≤ 480px)
+   ============================================ */
+@media (max-width: 480px) {
+  .page-container {
+    padding: 12px;
+  }
+
+  .header {
+    padding: 0 12px;
+  }
+
+  .header-logo {
+    height: 28px;
+  }
+
+  .stats-card {
+    padding: 16px;
+  }
+
+  h1, .page-title {
+    font-size: 1.3rem;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+
+  .sidebar {
+    width: 100vw;
+  }
+}
+

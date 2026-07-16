@@ -9,26 +9,37 @@ import {
   Settings,
   Users,
   DollarSign,
-  FileText
+  FileText,
+  X
 } from 'lucide-react';
 
-const Sidebar = ({ activePage, setActivePage }) => {
+const Sidebar = ({ activePage, setActivePage, isOpen, onClose }) => {
   const { logout, isAdmin, isAgent } = useAuth();
 
   const handleNav = (page) => {
     setActivePage(page);
+    if (onClose) onClose(); // Fermer le menu sur mobile après navigation
   };
 
   return (
-    <aside className="sidebar animate-fade-in">
-      <div>
-        <div className="sidebar-logo">
-          <img
-            src="/logo.png"
-            alt="EhuMotors"
-            style={{ height: '40px', width: 'auto', objectFit: 'contain', maxWidth: '160px' }}
-          />
-        </div>
+    <>
+      {/* Overlay mobile */}
+      {isOpen && (
+        <div className="sidebar-overlay" onClick={onClose} aria-hidden="true" />
+      )}
+      <aside className={`sidebar animate-fade-in ${isOpen ? 'open' : ''}`}>
+        <div>
+          <div className="sidebar-logo">
+            <img
+              src="/logo.png"
+              alt="EhuMotors"
+              className="sidebar-logo-img"
+            />
+            {/* Bouton fermer sur mobile */}
+            <button className="sidebar-close-btn" onClick={onClose} aria-label="Fermer">
+              <X size={20} />
+            </button>
+          </div>
 
         <nav className="sidebar-menu">
           {/* Agent Sidebar Navigation */}
@@ -153,7 +164,8 @@ const Sidebar = ({ activePage, setActivePage }) => {
           <span>Déconnexion</span>
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };
 

@@ -36,7 +36,7 @@ const Login = () => {
             <img
               src="/logo.png"
               alt="EhuMotors"
-              style={{ height: '52px', width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
+              style={{ height: '65px', width: 'auto', objectFit: 'contain' }}
             />
           </div>
           <div className="login-header-subtitle">
