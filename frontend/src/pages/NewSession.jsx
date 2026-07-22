@@ -234,6 +234,16 @@ const NewSession = () => {
     }
   };
 
+  const cancelPendingPayment = () => {
+    // Le widget KKiaPay n'expose pas d'événement de fermeture/annulation
+    // (seulement addSuccessListener/addFailedListener) : si l'utilisateur ferme
+    // la popup sans finaliser le paiement, aucun listener ne se déclenche et la
+    // modale reste bloquée sur "initiating_payment" sans ce bouton d'échappement.
+    pendingPaymentRef.current = { sessionId: null, numeroMomo: '' };
+    setPaymentStep('idle');
+    setPaymentMsg('');
+  };
+
   const resetForm = () => {
     setChassis('');
     setClient(null);
@@ -476,6 +486,16 @@ const NewSession = () => {
                     Transaction de {livePrice} FCFA — saisissez le numéro {momoNumber} et validez dans le widget KKiaPay.
                   </p>
                 </>
+              )}
+
+              {paymentStep === 'initiating_payment' && (
+                <button
+                  className="btn btn-secondary"
+                  style={{ marginTop: '16px' }}
+                  onClick={cancelPendingPayment}
+                >
+                  Annuler
+                </button>
               )}
 
               {paymentStep === 'payment_success' && (

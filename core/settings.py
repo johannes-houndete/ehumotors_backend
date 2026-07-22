@@ -134,9 +134,18 @@ CORS_ALLOWED_ORIGINS = [
 # https://app.kkiapay.me/dashboard/developers/keys — les 3 sont nécessaires
 # pour que le serveur puisse vérifier une transaction (X-API-KEY / X-PRIVATE-KEY
 # / X-SECRET-KEY). La clé publique est aussi utilisée par le widget côté front.
-KKIAPAY_PUBLIC_KEY      = os.environ.get('KKIAPAY_PUBLIC_KEY', '')
-KKIAPAY_PRIVATE_KEY    = os.environ.get('KKIAPAY_PRIVATE_KEY', '')
-KKIAPAY_SECRET_KEY     = os.environ.get('KKIAPAY_SECRET_KEY', '')
-KKIAPAY_BASE_URL       = os.environ.get('KKIAPAY_BASE_URL', 'https://api-sandbox.kkiapay.me')
-KKIAPAY_WEBHOOK_SECRET = os.environ.get('KKIAPAY_WEBHOOK_SECRET', '')
+
+def _clean_env(key: str, default: str = '') -> str:
+    # Certaines plateformes (ex. Railway) laissent passer un \n ou un espace
+    # collé en fin de variable lors du copier-coller dans leur UI — ça part
+    # tel quel dans les headers HTTP et `requests` rejette la requête avec
+    # "Invalid leading whitespace, reserved character(s) [...] in header value".
+    return os.environ.get(key, default).strip()
+
+
+KKIAPAY_PUBLIC_KEY      = _clean_env('KKIAPAY_PUBLIC_KEY')
+KKIAPAY_PRIVATE_KEY    = _clean_env('KKIAPAY_PRIVATE_KEY')
+KKIAPAY_SECRET_KEY     = _clean_env('KKIAPAY_SECRET_KEY')
+KKIAPAY_BASE_URL       = _clean_env('KKIAPAY_BASE_URL', 'https://api-sandbox.kkiapay.me')
+KKIAPAY_WEBHOOK_SECRET = _clean_env('KKIAPAY_WEBHOOK_SECRET')
 KKIAPAY_SANDBOX        = 'sandbox' in KKIAPAY_BASE_URL
