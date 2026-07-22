@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Search, CheckCircle, ShieldAlert, Phone, CreditCard, Sparkles, Check, Loader2 } from 'lucide-react';
 
@@ -65,6 +65,65 @@ const NewSession = () => {
   const [paymentStep, setPaymentStep] = useState('idle'); // idle | creating_session | initiating_payment | payment_success | payment_failed
   const [paymentMsg, setPaymentMsg] = useState('');
   const [txnId, setTxnId] = useState('');
+
+  // Config du widget KKiaPay (clé publique + mode sandbox), fournie par le backend
+  const [kkiapayConfig, setKkiapayConfig] = useState(null);
+  // Contexte de la session en attente de paiement, lu par les listeners KKiaPay
+  // (des refs pour éviter les closures obsolètes dans addSuccessListener/addFailedListener)
+  const pendingPaymentRef = useRef({ sessionId: null, numeroMomo: '' });
+
+  useEffect(() => {
+    apiFetch('/api/paiements/config/')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setKkiapayConfig(data))
+      .catch(() => setKkiapayConfig(null));
+  }, [apiFetch]);
+
+  useEffect(() => {
+    const handleSuccess = async (response) => {
+      const { sessionId, numeroMomo } = pendingPaymentRef.current;
+      if (!sessionId) return;
+
+      try {
+        const res = await apiFetch(`/api/sessions/${sessionId}/verifier-paiement/`, {
+          method: 'POST',
+          body: JSON.stringify({
+            transaction_id: response.transactionId,
+            numero_momo: numeroMomo,
+          }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Paiement refusé par KKiaPay.');
+        }
+
+        setTxnId(data.transaction_id || '');
+        setPaymentMsg(data.message || '');
+        setPaymentStep('payment_success');
+      } catch (err) {
+        setPaymentMsg(err.message);
+        setPaymentStep('payment_failed');
+      }
+    };
+
+    const handleFailed = () => {
+      setPaymentMsg('Paiement annulé ou refusé dans la fenêtre KKiaPay.');
+      setPaymentStep('payment_failed');
+    };
+
+    if (typeof window.addSuccessListener === 'function') {
+      window.addSuccessListener(handleSuccess);
+      window.addFailedListener(handleFailed);
+    }
+
+    return () => {
+      if (typeof window.removeKkiapayListener === 'function') {
+        window.removeKkiapayListener('success');
+        window.removeKkiapayListener('failed');
+      }
+    };
+  }, [apiFetch]);
 
   useEffect(() => {
     // Recompute values when percentages change
@@ -140,30 +199,31 @@ const NewSession = () => {
       
       const sessionData = await sessionResponse.json();
       const sessionId = sessionData.id;
+      const montant = sessionData.cout_fcfa ?? livePrice;
 
-      // 2. Initiate Payment on backend
+      // 2. Ouvrir le widget KKiaPay — le paiement est initié et complété par
+      // l'utilisateur DANS le widget (numéro MoMo + OTP), pas par notre backend.
+      // La confirmation arrive de manière asynchrone via addSuccessListener,
+      // qui appelle le backend pour vérifier la transaction (voir useEffect).
       setPaymentStep('initiating_payment');
-      
-      const paymentResponse = await apiFetch(`/api/sessions/${sessionId}/paiement/`, {
-        method: 'POST',
-        body: JSON.stringify({
-          numero_momo: momoNumber
-        })
-      });
 
-      const paymentData = await paymentResponse.json();
-      
-      if (!paymentResponse.ok) {
-        throw new Error(paymentData.error || 'Échec de l\'initiation du paiement KKiaPay.');
+      if (!kkiapayConfig || !kkiapayConfig.public_key) {
+        throw new Error('Configuration KKiaPay indisponible (clé publique manquante côté serveur).');
+      }
+      if (typeof window.openKkiapayWidget !== 'function') {
+        throw new Error('Widget KKiaPay non chargé (script cdn.kkiapay.me bloqué ou hors-ligne).');
       }
 
-      setTxnId(paymentData.transaction_id || 'PLACEHOLDER_TXN_001');
-      setPaymentMsg(paymentData.message || 'Paiement simulé validé.');
-      
-      // Sandbox success simulation timeout
-      setTimeout(() => {
-        setPaymentStep('payment_success');
-      }, 2000);
+      pendingPaymentRef.current = { sessionId, numeroMomo: momoNumber };
+
+      window.openKkiapayWidget({
+        amount: Math.round(montant),
+        key: kkiapayConfig.public_key,
+        sandbox: kkiapayConfig.sandbox,
+        position: 'center',
+        callback: '',
+        data: { session_id: sessionId },
+      });
 
     } catch (err) {
       console.error(err);
@@ -411,9 +471,9 @@ const NewSession = () => {
               {paymentStep === 'initiating_payment' && (
                 <>
                   <Loader2 className="animate-spin" size={48} style={{ color: 'var(--primary-blue)' }} />
-                  <p style={{ fontWeight: 600 }}>Appel de la Sandbox KKiaPay...</p>
+                  <p style={{ fontWeight: 600 }}>Finalisez le paiement dans la fenêtre KKiaPay</p>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    Génération de la transaction de {livePrice} FCFA vers {momoNumber}
+                    Transaction de {livePrice} FCFA — saisissez le numéro {momoNumber} et validez dans le widget KKiaPay.
                   </p>
                 </>
               )}

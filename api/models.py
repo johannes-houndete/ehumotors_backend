@@ -34,7 +34,7 @@ class Paiements(models.Model):
     montant = models.FloatField()
     numero_momo = models.CharField(max_length=20)
     transaction_id = models.CharField(max_length=100, blank=True, null=True)
-    statut = models.CharField(max_length=7)
+    statut = models.CharField(max_length=15)
     date_heure = models.DateTimeField(blank=True, null=True)
 
     class Meta:

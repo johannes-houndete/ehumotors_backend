@@ -11,7 +11,13 @@ router.register(r'tarifs',       views.TarifViewSet,        basename='tarifs')
 router.register(r'utilisateurs', views.UtilisateurViewSet,  basename='utilisateurs')
 
 urlpatterns = [
-    path('', include(router.urls)),
+    # Routes explicites AVANT le router : la route détail générée par le
+    # router (`paiements/<pk>/`, regex `[^/.]+`) matche n'importe quel segment
+    # sans slash — donc "webhook" ou "config" aussi. Si le router est inclus
+    # en premier, Django route ces requêtes vers PaiementViewSet.retrieve()
+    # au lieu des vues ci-dessous.
     path('dashboard/stats/',      views.DashboardStatsView.as_view(),  name='dashboard-stats'),
     path('paiements/webhook/',    views.KKiapayWebhookView.as_view(),  name='kkiapay-webhook'),
+    path('paiements/config/',     views.KkiapayConfigView.as_view(),   name='kkiapay-config'),
+    path('', include(router.urls)),
 ]

@@ -5,78 +5,54 @@ from django.conf import settings
 
 
 KKIAPAY_PUBLIC_KEY  = getattr(settings, "KKIAPAY_PUBLIC_KEY", "")
-KKIAPAY_API_KEY    = getattr(settings, "KKIAPAY_API_KEY", "")
 KKIAPAY_PRIVATE_KEY = getattr(settings, "KKIAPAY_PRIVATE_KEY", "")
 KKIAPAY_SECRET_KEY  = getattr(settings, "KKIAPAY_SECRET_KEY", "")
 KKIAPAY_BASE_URL    = getattr(settings, "KKIAPAY_BASE_URL", "https://api-sandbox.kkiapay.me")
 KKIAPAY_WEBHOOK_SECRET = getattr(settings, "KKIAPAY_WEBHOOK_SECRET", "")
 
 
-def initier_paiement(montant: float, numero_momo: str, reason: str = "Recharge EhuMotors") -> dict:
+class KkiapayError(Exception):
+    pass
+
+
+def verifier_transaction(transaction_id: str) -> dict:
     """
-    Initie un paiement Mobile Money via KKiaPay.
-    Tentative d'appel API ; si les clés sont invalides ou l'API injoignable,
-    bascule automatiquement en mode simulation pour permettre les tests.
+    Vérifie le statut d'une transaction KKiaPay via /api/v1/transactions/status.
+
+    KKiaPay n'expose aucune API pour initier un paiement Mobile Money depuis le
+    serveur : le paiement est initié côté client par le widget JS (kkiapay-widget),
+    qui renvoie un transactionId une fois le paiement complété par l'utilisateur.
+    Le serveur doit ensuite vérifier ce transactionId ici avant de considérer la
+    session comme payée — ne jamais faire confiance à un "succès" annoncé par le
+    front sans cette vérification.
     """
+    if not (KKIAPAY_PUBLIC_KEY and KKIAPAY_PRIVATE_KEY and KKIAPAY_SECRET_KEY):
+        raise KkiapayError(
+            "Clés KKiaPay incomplètes : KKIAPAY_PUBLIC_KEY, KKIAPAY_PRIVATE_KEY et "
+            "KKIAPAY_SECRET_KEY sont toutes requises pour vérifier une transaction."
+        )
+
     headers = {
         "Accept": "application/json",
-        "Content-Type": "application/json",
+        "X-API-KEY": KKIAPAY_PUBLIC_KEY,
+        "X-PRIVATE-KEY": KKIAPAY_PRIVATE_KEY,
+        "X-SECRET-KEY": KKIAPAY_SECRET_KEY,
     }
-    if KKIAPAY_PUBLIC_KEY:
-        headers["X-API-KEY"] = KKIAPAY_PUBLIC_KEY
-    elif KKIAPAY_API_KEY:
-        headers["x-api-key"] = KKIAPAY_API_KEY
-    else:
-        return _simulation(montant, numero_momo, "aucune clé configurée")
 
-    if KKIAPAY_PRIVATE_KEY:
-        headers["X-PRIVATE-KEY"] = KKIAPAY_PRIVATE_KEY
-    if KKIAPAY_SECRET_KEY:
-        headers["X-SECRET-KEY"] = KKIAPAY_SECRET_KEY
-
-    payload = {
-        "amount": int(montant),
-        "phone": numero_momo,
-        "reason": reason,
-    }
-    
     try:
         resp = requests.post(
-            f"{KKIAPAY_BASE_URL}/api/v1/payments/request",
-            json=payload,
+            f"{KKIAPAY_BASE_URL}/api/v1/transactions/status",
+            json={"transactionId": transaction_id},
             headers=headers,
             timeout=15,
         )
-        
-        if resp.status_code == 200:
-            data = resp.json()
-            if data.get("requestId"):
-                return {
-                    "success": True,
-                    "transaction_id": data["requestId"],
-                    "message": "Paiement initié avec succès",
-                }
-            return {
-                "success": False,
-                "transaction_id": None,
-                "message": data.get("message", "Réponse KKiaPay incomplète"),
-            }
-
-        # L'API a refusé la requête → on bascule en simulation
-        return _simulation(montant, numero_momo, "API KKiaPay indisponible (mode simulation)")
-
     except requests.RequestException as e:
-        return _simulation(montant, numero_momo, f"API KKiaPay injoignable ({str(e)})")
+        raise KkiapayError(f"API KKiaPay injoignable ({e})") from e
 
+    if resp.status_code != 200:
+        raise KkiapayError(f"KKiaPay a répondu {resp.status_code}: {resp.text[:200]}")
 
-def _simulation(montant: float, numero_momo: str, raison: str) -> dict:
-    """Renvoie une transaction fictive pour permettre les tests hors-ligne."""
-    import uuid
-    return {
-        "success": True,
-        "transaction_id": f"SIMU_{uuid.uuid4().hex[:12].upper()}",
-        "message": raison,
-    }
+    return resp.json()
 
 
 def verifier_webhook_signature(request_body: bytes, signature: str) -> bool:

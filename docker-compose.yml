@@ -13,7 +13,10 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-ehu_pass}
     volumes:
       - db_data:/var/lib/mysql
-    # Port non exposé à l'hôte — accès interne Docker uniquement
+    # Port hôte 3307 (et non 3306) : évite le conflit avec un éventuel MySQL
+    # natif déjà présent sur la machine (mysql.service) qui écoute sur 3306.
+    ports:
+      - "127.0.0.1:3307:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-ehu_secret}"]
       interval: 10s

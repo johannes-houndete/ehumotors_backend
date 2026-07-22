@@ -17,7 +17,8 @@ from .serializers import (
     UtilisateurSerializer, UtilisateurCreateSerializer,
 )
 from .permissions import IsAdmin, IsAdminOrAgent
-from .kkiapay import initier_paiement, verifier_webhook_signature
+from .kkiapay import verifier_transaction, verifier_webhook_signature, KkiapayError
+from django.conf import settings
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -214,57 +215,70 @@ class SessionViewSet(viewsets.ModelViewSet):
 
         serializer.save(
             agent_id=user_id,
+            station=station,
             energie_wh=energie_wh,
             cout_fcfa=cout_fcfa,
             statut='en_attente',
             date_heure=timezone.now(),
         )
 
-    # ── Action : initier le paiement KKiaPay ──────────────────────────────────
-    @action(detail=True, methods=['post'], url_path='paiement',
+    # ── Action : vérifier un paiement KKiaPay initié côté client ──────────────
+    # KKiaPay ne fournit pas d'API pour initier un paiement Mobile Money depuis
+    # le serveur : le paiement est fait dans le navigateur via le widget JS
+    # KKiaPay (voir NewSession.jsx). Le front nous transmet ici le
+    # transactionId renvoyé par le widget une fois le paiement complété, et
+    # NOUS revérifions ce transactionId directement auprès de KKiaPay avant de
+    # marquer quoi que ce soit comme payé — on ne fait jamais confiance à la
+    # seule affirmation du front.
+    @action(detail=True, methods=['post'], url_path='verifier-paiement',
             permission_classes=[IsAuthenticated, IsAdminOrAgent])
-    def initier_paiement_session(self, request, pk=None):
+    def verifier_paiement_session(self, request, pk=None):
         session = self.get_object()
 
         if session.statut == 'paye':
             return Response({'error': 'Cette session est déjà payée.'}, status=400)
 
         numero_momo = request.data.get('numero_momo')
+        transaction_id = request.data.get('transaction_id')
         if not numero_momo:
             return Response({'error': 'Numéro Mobile Money requis.'}, status=400)
+        if not transaction_id:
+            return Response({'error': 'transaction_id requis (renvoyé par le widget KKiaPay).'}, status=400)
 
         montant = session.cout_fcfa or 0
 
-        # ── Appel KKiaPay (placeholder tant que la clé n'est pas configurée) ──
-        result = initier_paiement(
-            montant=montant,
-            numero_momo=numero_momo,
-            reason=f"Recharge EhuMotors session #{session.id}",
-        )
+        try:
+            resultat = verifier_transaction(transaction_id)
+        except KkiapayError as e:
+            return Response({'error': str(e)}, status=502)
 
-        if not result['success']:
-            return Response({'error': result['message']}, status=502)
+        est_paye = resultat.get('status') == 'SUCCESS'
 
-        # Créer ou mettre à jour l'enregistrement paiement
         paiement, _ = Paiements.objects.update_or_create(
             session=session,
             defaults={
                 'montant': montant,
                 'numero_momo': numero_momo,
-                'transaction_id': result['transaction_id'],
-                'statut': 'en_cours',
+                'transaction_id': transaction_id,
+                'statut': 'success' if est_paye else 'failed',
                 'date_heure': timezone.now(),
             }
         )
 
-        session.statut = 'en_cours'
+        session.statut = 'paye' if est_paye else 'echec'
         session.save(update_fields=['statut'])
 
+        if not est_paye:
+            return Response({
+                'error': f"Paiement non confirmé par KKiaPay (statut: {resultat.get('status', 'inconnu')}).",
+                'transaction_id': transaction_id,
+            }, status=402)
+
         return Response({
-            'message': result['message'],
-            'transaction_id': result['transaction_id'],
+            'message': 'Paiement confirmé par KKiaPay.',
+            'transaction_id': transaction_id,
             'montant': montant,
-            'statut': 'en_cours',
+            'statut': 'paye',
         }, status=200)
 
     # ── Action : export CSV ───────────────────────────────────────────────────
@@ -318,6 +332,21 @@ class PaiementViewSet(viewsets.ReadOnlyModelViewSet):
         if role == 'agent':
             qs = qs.filter(session__station_id=station_id)
         return qs.order_by('-date_heure')
+
+
+class KkiapayConfigView(APIView):
+    """
+    Fournit au front la clé publique KKiaPay + le mode (sandbox/live) pour
+    initialiser le widget de paiement. La clé publique n'est pas un secret
+    (elle est de toute façon exposée dans le JS du navigateur par le widget).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            'public_key': settings.KKIAPAY_PUBLIC_KEY,
+            'sandbox': settings.KKIAPAY_SANDBOX,
+        })
 
 
 class KKiapayWebhookView(APIView):
