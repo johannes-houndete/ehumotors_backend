@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Search, Calendar, Filter, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { Search, Calendar, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const History = () => {
   const { apiFetch } = useAuth();
@@ -107,8 +107,6 @@ const History = () => {
     switch (status) {
       case 'paye':
         return <span className="badge badge-success">Payé</span>;
-      case 'en_cours':
-        return <span className="badge badge-pending">En cours</span>;
       case 'echec':
         return <span className="badge badge-danger">Échec</span>;
       case 'en_attente':
@@ -175,7 +173,6 @@ const History = () => {
           >
             <option value="">Tous</option>
             <option value="paye">Payé</option>
-            <option value="en_cours">En cours</option>
             <option value="en_attente">En attente</option>
             <option value="echec">Échec</option>
           </select>

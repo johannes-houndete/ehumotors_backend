@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Sun, Moon, Bell, RotateCcw, Menu } from 'lucide-react';
+import { Sun, Moon, RotateCcw, Menu } from 'lucide-react';
 
 const Header = ({ onMenuClick }) => {
   const { user, theme, toggleTheme } = useAuth();
@@ -28,20 +28,6 @@ const Header = ({ onMenuClick }) => {
         {/* Refresh Icon Action */}
         <button className="theme-toggle" onClick={() => window.location.reload()} title="Rafraîchir les données">
           <RotateCcw size={18} />
-        </button>
-
-        {/* Notifications Icon */}
-        <button className="theme-toggle" style={{ position: 'relative' }} title="Notifications">
-          <Bell size={18} />
-          <span style={{
-            position: 'absolute',
-            top: '4px',
-            right: '4px',
-            width: '8px',
-            height: '8px',
-            backgroundColor: 'var(--color-danger)',
-            borderRadius: '50%'
-          }} />
         </button>
 
         {/* User Info Card */}

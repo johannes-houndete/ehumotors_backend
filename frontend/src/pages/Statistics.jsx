@@ -11,7 +11,7 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { BarChart3, TrendingUp, RefreshCw, Activity, ArrowUpRight, CheckCircle2, Plug } from 'lucide-react';
+import { BarChart3, RefreshCw, Activity, ArrowUpRight, CheckCircle2, Plug } from 'lucide-react';
 
 const mockEvolutionData = [
   { name: 'S1', value: 12 },
@@ -249,11 +249,11 @@ const Statistics = () => {
             </div>
             
             <div className="radial-chart-item">
-              <CircularProgress 
-                percentage={stats.sessions > 0 ? Math.round((stats.paid / stats.sessions) * 100) : 0} 
-                strokeColor="var(--primary-blue)" 
+              <CircularProgress
+                percentage={(stats.paid + stats.cancelled) > 0 ? Math.round((stats.paid / (stats.paid + stats.cancelled)) * 100) : 0}
+                strokeColor="var(--primary-blue)"
               />
-              <span className="radial-chart-label">Taux de succès (%)</span>
+              <span className="radial-chart-label">Taux de succès paiement (%)</span>
             </div>
           </div>
         </div>

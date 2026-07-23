@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ShieldAlert, Check, Play, Loader2, ArrowRight } from 'lucide-react';
+import { ShieldAlert, Loader2 } from 'lucide-react';
 
 const Tarification = () => {
   const { apiFetch, user } = useAuth();

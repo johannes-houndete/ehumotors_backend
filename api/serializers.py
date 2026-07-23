@@ -74,9 +74,16 @@ class TarifSerializer(serializers.ModelSerializer):
 
 
 class SessionSerializer(serializers.ModelSerializer):
+    moto_chassis = serializers.CharField(source='moto.num_chassis', read_only=True)
+    client_nom = serializers.CharField(source='moto.client.nom', read_only=True)
+
     class Meta:
         model = Sessions
-        fields = '__all__'
+        fields = [
+            'id', 'moto', 'agent', 'station', 'tarif',
+            'pct_depart', 'pct_cible', 'energie_wh', 'cout_fcfa',
+            'statut', 'date_heure', 'moto_chassis', 'client_nom',
+        ]
         read_only_fields = ['energie_wh', 'cout_fcfa', 'statut', 'date_heure', 'agent', 'station', 'tarif']
 
 

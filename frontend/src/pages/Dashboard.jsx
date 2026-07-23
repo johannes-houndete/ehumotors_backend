@@ -12,7 +12,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { Zap, DollarSign, Plug, TrendingUp, RefreshCw, Users, Activity } from 'lucide-react';
+import { Zap, DollarSign, Plug, RefreshCw, Users, Activity } from 'lucide-react';
 
 const mockChartData = [
   { name: 'Jan', revenue: 45000 },
@@ -53,12 +53,22 @@ const Dashboard = () => {
       setSessions(sessionsList.slice(0, 10)); // Take top 10 for dashboard
 
       // 2. Fetch agents list if admin to display real agent names
+      // L'API pagine (PAGE_SIZE=20) : on parcourt toutes les pages pour que
+      // le compteur "Agents actifs" reflète le total réel, pas juste les 20
+      // premiers.
       let agentsList = [];
       if (isAdmin) {
         try {
-          const agentsResponse = await apiFetch('/api/utilisateurs/');
-          const agentsData = await agentsResponse.json();
-          agentsList = (agentsData.results || agentsData || []).filter(u => u.role === 'agent');
+          let all = [];
+          let page = 1;
+          while (true) {
+            const agentsResponse = await apiFetch(`/api/utilisateurs/?page=${page}`);
+            const agentsData = await agentsResponse.json();
+            all = all.concat(agentsData.results || agentsData || []);
+            if (!agentsData.next) break;
+            page += 1;
+          }
+          agentsList = all.filter(u => u.role === 'agent');
           setAgents(agentsList);
         } catch (err) {
           console.error("Failed to load agents list", err);
@@ -127,8 +137,6 @@ const Dashboard = () => {
     switch (status) {
       case 'paye':
         return <span className="badge badge-success">Payé</span>;
-      case 'en_cours':
-        return <span className="badge badge-pending">En cours</span>;
       case 'echec':
         return <span className="badge badge-danger">Échec</span>;
       case 'en_attente':

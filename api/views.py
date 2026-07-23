@@ -3,8 +3,9 @@ from datetime import datetime, timedelta
 
 from django.http import HttpResponse
 from django.utils import timezone
+from django.db import transaction, IntegrityError
 from django.db.models import Sum, Count, Q
-from rest_framework import viewsets, status
+from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,7 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from .models import Clients, Motos, Stations, Utilisateurs, Sessions, Paiements, Tarifs
 from .serializers import (
-    ClientSerializer, StationSerializer, SessionSerializer,
+    ClientSerializer, MotoSerializer, StationSerializer, SessionSerializer,
     PaiementSerializer, TarifSerializer,
     UtilisateurSerializer, UtilisateurCreateSerializer,
 )
@@ -115,17 +116,35 @@ def _calculer_cout(pct_depart: float, pct_cible: float, capacite_wh: float, prix
 # Clients
 # ─────────────────────────────────────────────────────────────────────────────
 
-class ClientViewSet(viewsets.ReadOnlyModelViewSet):
+class ClientViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,
+                     mixins.UpdateModelMixin, mixins.DestroyModelMixin,
+                     viewsets.GenericViewSet):
+    # Pas de création générique ici : un client sans moto n'a pas de sens
+    # dans ce métier, la création passe uniquement par l'action 'creer'
+    # ci-dessous qui insère client + moto ensemble.
     queryset = Clients.objects.all()
     serializer_class = ClientSerializer
     permission_classes = [IsAuthenticated, IsAdminOrAgent]
 
     def get_permissions(self):
-        # Création réservée à l'admin — la recherche/consultation reste ouverte
-        # aux agents (nécessaire pour démarrer une session sur NewSession.jsx).
-        if self.action == 'creer':
+        # Écriture (création / modification / suppression) → admin uniquement.
+        # La recherche/consultation reste ouverte aux agents (nécessaire pour
+        # démarrer une session sur NewSession.jsx).
+        if self.action in ('creer', 'update', 'partial_update', 'destroy'):
             return [IsAuthenticated(), IsAdmin()]
         return super().get_permissions()
+
+    def destroy(self, request, *args, **kwargs):
+        client = self.get_object()
+        try:
+            with transaction.atomic():
+                Motos.objects.filter(client=client).delete()
+                client.delete()
+        except IntegrityError:
+            return Response({
+                'error': 'Impossible de supprimer ce client : des sessions existent pour sa/ses moto(s).',
+            }, status=400)
+        return Response(status=204)
 
     # ── Action : créer un client + sa moto en une seule opération atomique ────
     # Un client sans moto n'a pas de sens dans ce métier (on l'identifie
@@ -134,8 +153,6 @@ class ClientViewSet(viewsets.ReadOnlyModelViewSet):
     # client n'est pas non plus créé — pas de ligne orpheline en DB.
     @action(detail=False, methods=['post'], url_path='creer')
     def creer(self, request):
-        from django.db import transaction, IntegrityError
-
         nom = (request.data.get('nom') or '').strip()
         num_chassis = (request.data.get('num_chassis') or '').strip()
         telephone = request.data.get('telephone') or None
@@ -192,6 +209,23 @@ class ClientViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({'error': 'Châssis introuvable'}, status=404)
 
 
+class MotoViewSet(mixins.UpdateModelMixin, viewsets.GenericViewSet):
+    """
+    Modification d'une moto (châssis / modèle) rattachée à un client existant.
+    Pas de liste/création ici : les motos se créent uniquement via
+    ClientViewSet.creer (client + moto ensemble).
+    """
+    queryset = Motos.objects.all()
+    serializer_class = MotoSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def partial_update(self, request, *args, **kwargs):
+        try:
+            return super().partial_update(request, *args, **kwargs)
+        except IntegrityError:
+            return Response({'error': 'Ce numéro de châssis est déjà enregistré.'}, status=400)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Stations
 # ─────────────────────────────────────────────────────────────────────────────
@@ -218,7 +252,7 @@ class SessionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         _, role, station_id = _get_user_from_token(self.request)
-        qs = Sessions.objects.select_related('moto', 'agent', 'station', 'tarif')
+        qs = Sessions.objects.select_related('moto', 'moto__client', 'agent', 'station', 'tarif')
 
         if role == 'agent':
             # Un agent ne voit que les sessions de sa propre station
@@ -522,6 +556,18 @@ class UtilisateurViewSet(viewsets.ModelViewSet):
             return UtilisateurCreateSerializer
         return UtilisateurSerializer
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        user_id, _, _ = _get_user_from_token(request)
+        if instance.pk == user_id:
+            return Response({'error': 'Vous ne pouvez pas supprimer votre propre compte.'}, status=400)
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except IntegrityError:
+            return Response({
+                'error': "Impossible de supprimer : des sessions sont associées à ce compte. Désactivez-le plutôt.",
+            }, status=400)
+
     # ── Action : changer ses propres identifiants (email / mot de passe) ─────
     # Contrairement à l'édition d'un agent par un admin (update/partial_update
     # ci-dessus, où l'admin agit sur le compte d'un tiers avec son propre
@@ -580,15 +626,19 @@ class DashboardStatsView(APIView):
         if role == 'agent':
             sessions_qs = sessions_qs.filter(station_id=station_id)
 
+        # Le chiffre d'affaires ne compte que les sessions réellement payées :
+        # sessions_qs contient aussi les sessions en_attente/echec, dont le
+        # cout_fcfa n'a jamais été encaissé et ne doit pas gonfler le CA.
+        sessions_payees_qs = sessions_qs.filter(statut='paye')
+
         agregats = sessions_qs.aggregate(
             total_sessions=Count('id'),
             total_energie_wh=Sum('energie_wh'),
-            total_ca_fcfa=Sum('cout_fcfa'),
         )
+        total_ca_fcfa = sessions_payees_qs.aggregate(total=Sum('cout_fcfa'))['total']
 
-        sessions_payees   = sessions_qs.filter(statut='paye').count()
-        sessions_en_cours = sessions_qs.filter(statut='en_cours').count()
-        sessions_echec    = sessions_qs.filter(statut='echec').count()
+        sessions_payees = sessions_payees_qs.count()
+        sessions_echec  = sessions_qs.filter(statut='echec').count()
 
         # Stats par station
         par_station = (
@@ -597,7 +647,7 @@ class DashboardStatsView(APIView):
             .annotate(
                 nb_sessions=Count('id'),
                 energie_wh=Sum('energie_wh'),
-                ca_fcfa=Sum('cout_fcfa'),
+                ca_fcfa=Sum('cout_fcfa', filter=Q(statut='paye')),
             )
             .order_by('-nb_sessions')
         )
@@ -605,7 +655,7 @@ class DashboardStatsView(APIView):
         # Temporal evolution (timeseries)
         from django.db.models import Avg, F
         from django.db.models.functions import TruncDay, TruncHour
-        
+
         if periode == 'jour':
             trunc_func = TruncHour('date_heure')
         else:
@@ -617,7 +667,7 @@ class DashboardStatsView(APIView):
             .values('label')
             .annotate(
                 nb_sessions=Count('id'),
-                ca_fcfa=Sum('cout_fcfa'),
+                ca_fcfa=Sum('cout_fcfa', filter=Q(statut='paye')),
                 avg_duration_min=Avg(F('pct_cible') - F('pct_depart')) * 0.5
             )
             .order_by('label')
@@ -649,10 +699,9 @@ class DashboardStatsView(APIView):
             'global': {
                 'total_sessions':  agregats['total_sessions'] or 0,
                 'sessions_payees': sessions_payees,
-                'sessions_en_cours': sessions_en_cours,
                 'sessions_echec':  sessions_echec,
                 'total_energie_wh': round(agregats['total_energie_wh'] or 0, 2),
-                'chiffre_affaires_fcfa': round(agregats['total_ca_fcfa'] or 0, 2),
+                'chiffre_affaires_fcfa': round(total_ca_fcfa or 0, 2),
             },
             'par_station': list(par_station),
             'evolution': evolution_serialized

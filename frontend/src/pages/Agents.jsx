@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, Edit2, ShieldAlert, Check, X, UserX, Loader2 } from 'lucide-react';
+import { UserPlus, ShieldAlert, Check, X, UserX, Trash2, Loader2 } from 'lucide-react';
 
 const Agents = () => {
   const { apiFetch } = useAuth();
@@ -22,26 +22,34 @@ const Agents = () => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
 
+  // L'API pagine (PAGE_SIZE=20) : on parcourt toutes les pages pour ne pas
+  // couper la liste des agents/stations au-delà de la première page.
+  const fetchAllPages = async (path) => {
+    let all = [];
+    let page = 1;
+    while (true) {
+      const res = await apiFetch(`${path}${path.includes('?') ? '&' : '?'}page=${page}`);
+      if (!res.ok) throw new Error('Impossible de charger les données.');
+      const data = await res.json();
+      all = all.concat(data.results || data || []);
+      if (!data.next) break;
+      page += 1;
+    }
+    return all;
+  };
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [agentsRes, stationsRes] = await Promise.all([
-        apiFetch('/api/utilisateurs/'),
-        apiFetch('/api/stations/')
+      const [agentsList, stationsList] = await Promise.all([
+        fetchAllPages('/api/utilisateurs/'),
+        fetchAllPages('/api/stations/'),
       ]);
 
-      if (!agentsRes.ok || !stationsRes.ok) {
-        throw new Error('Impossible de charger les données.');
-      }
-
-      const agentsData = await agentsRes.json();
-      const stationsData = await stationsRes.json();
-
       // Only display users with the 'agent' role
-      const agentsList = (agentsData.results || agentsData || []).filter(u => u.role === 'agent');
-      setAgents(agentsList);
-      setStations(stationsData.results || stationsData || []);
+      setAgents(agentsList.filter(u => u.role === 'agent'));
+      setStations(stationsList);
     } catch (err) {
       console.error(err);
       setError('Erreur lors du chargement des agents.');
@@ -118,6 +126,24 @@ const Agents = () => {
     }
   };
 
+  const deleteAgent = async (agent) => {
+    if (!window.confirm(`Supprimer définitivement l'agent "${agent.nom}" ?`)) return;
+
+    setError(null);
+    try {
+      const response = await apiFetch(`/api/utilisateurs/${agent.id}/`, { method: 'DELETE' });
+      if (response.status === 204) {
+        setAgents(prev => prev.filter(a => a.id !== agent.id));
+        return;
+      }
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "Échec de la suppression de l'agent.");
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    }
+  };
+
   return (
     <div className="page-container">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -191,6 +217,15 @@ const Agents = () => {
                           >
                             {agent.actif ? <UserX size={14} /> : <Check size={14} />}
                             <span>{agent.actif ? 'Bloquer' : 'Activer'}</span>
+                          </button>
+                          <button
+                            className="btn btn-secondary"
+                            style={{ padding: '4px 8px', fontSize: '0.8rem', color: 'var(--color-danger)' }}
+                            onClick={() => deleteAgent(agent)}
+                            title="Supprimer définitivement"
+                          >
+                            <Trash2 size={14} />
+                            <span>Supprimer</span>
                           </button>
                         </div>
                       </td>
