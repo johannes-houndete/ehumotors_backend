@@ -107,9 +107,23 @@ const NewSession = () => {
       }
     };
 
-    const handleFailed = () => {
+    const handleFailed = async (response) => {
+      const { sessionId } = pendingPaymentRef.current;
       setPaymentMsg('Paiement annulé ou refusé dans la fenêtre KKiaPay.');
       setPaymentStep('payment_failed');
+
+      if (!sessionId) return;
+      try {
+        await apiFetch(`/api/sessions/${sessionId}/echec-paiement/`, {
+          method: 'POST',
+          body: JSON.stringify({
+            transaction_id: response?.transactionId || '',
+            raison: 'Paiement refusé dans la fenêtre KKiaPay.',
+          }),
+        });
+      } catch (err) {
+        console.error(err);
+      }
     };
 
     if (typeof window.addSuccessListener === 'function') {
@@ -239,6 +253,13 @@ const NewSession = () => {
     // (seulement addSuccessListener/addFailedListener) : si l'utilisateur ferme
     // la popup sans finaliser le paiement, aucun listener ne se déclenche et la
     // modale reste bloquée sur "initiating_payment" sans ce bouton d'échappement.
+    const { sessionId } = pendingPaymentRef.current;
+    if (sessionId) {
+      apiFetch(`/api/sessions/${sessionId}/echec-paiement/`, {
+        method: 'POST',
+        body: JSON.stringify({ raison: 'Paiement annulé (fenêtre fermée par l\'agent).' }),
+      }).catch((err) => console.error(err));
+    }
     pendingPaymentRef.current = { sessionId: null, numeroMomo: '' };
     setPaymentStep('idle');
     setPaymentMsg('');

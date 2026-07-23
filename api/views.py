@@ -281,6 +281,40 @@ class SessionViewSet(viewsets.ModelViewSet):
             'statut': 'paye',
         }, status=200)
 
+    # ── Action : signaler l'échec/annulation d'un paiement KKiaPay ────────────
+    # Déclenchée quand le widget KKiaPay renvoie un échec (addFailedListener) ou
+    # que l'utilisateur ferme la popup sans transactionId exploitable. Aucun
+    # montant n'a été débité dans ce cas — pas besoin de revérifier auprès de
+    # KKiaPay, contrairement à verifier-paiement — on se contente de sortir la
+    # session de l'état "en_attente" pour ne pas la laisser bloquée.
+    @action(detail=True, methods=['post'], url_path='echec-paiement',
+            permission_classes=[IsAuthenticated, IsAdminOrAgent])
+    def echec_paiement_session(self, request, pk=None):
+        session = self.get_object()
+
+        if session.statut == 'paye':
+            return Response({'error': 'Cette session est déjà payée.'}, status=400)
+
+        transaction_id = request.data.get('transaction_id', '')
+        raison = request.data.get('raison', '')
+
+        if transaction_id:
+            Paiements.objects.update_or_create(
+                session=session,
+                defaults={
+                    'montant': session.cout_fcfa or 0,
+                    'numero_momo': request.data.get('numero_momo', ''),
+                    'transaction_id': transaction_id,
+                    'statut': 'failed',
+                    'date_heure': timezone.now(),
+                }
+            )
+
+        session.statut = 'echec'
+        session.save(update_fields=['statut'])
+
+        return Response({'message': raison or 'Paiement échoué.', 'statut': 'echec'}, status=200)
+
     # ── Action : export CSV ───────────────────────────────────────────────────
     @action(detail=False, methods=['get'], url_path='export',
             permission_classes=[IsAuthenticated, IsAdminOrAgent])
