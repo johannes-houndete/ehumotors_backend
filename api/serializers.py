@@ -3,16 +3,18 @@ from .models import Clients, Motos, Stations, Utilisateurs, Sessions, Paiements,
 import bcrypt
 
 
-class ClientSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Clients
-        fields = '__all__'
-
-
 class MotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Motos
         fields = '__all__'
+
+
+class ClientSerializer(serializers.ModelSerializer):
+    motos = MotoSerializer(many=True, read_only=True, source='motos_set')
+
+    class Meta:
+        model = Clients
+        fields = ['id', 'nom', 'telephone', 'email', 'created_at', 'motos']
 
 
 class StationSerializer(serializers.ModelSerializer):

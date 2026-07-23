@@ -19,6 +19,7 @@ from .serializers import (
 from .permissions import IsAdmin, IsAdminOrAgent
 from .kkiapay import verifier_transaction, verifier_webhook_signature, KkiapayError
 from django.conf import settings
+import bcrypt
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -118,6 +119,58 @@ class ClientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Clients.objects.all()
     serializer_class = ClientSerializer
     permission_classes = [IsAuthenticated, IsAdminOrAgent]
+
+    def get_permissions(self):
+        # Création réservée à l'admin — la recherche/consultation reste ouverte
+        # aux agents (nécessaire pour démarrer une session sur NewSession.jsx).
+        if self.action == 'creer':
+            return [IsAuthenticated(), IsAdmin()]
+        return super().get_permissions()
+
+    # ── Action : créer un client + sa moto en une seule opération atomique ────
+    # Un client sans moto n'a pas de sens dans ce métier (on l'identifie
+    # toujours par le châssis), donc on crée les deux ensemble dans une
+    # transaction : si l'insertion de la moto échoue (châssis déjà pris), le
+    # client n'est pas non plus créé — pas de ligne orpheline en DB.
+    @action(detail=False, methods=['post'], url_path='creer')
+    def creer(self, request):
+        from django.db import transaction, IntegrityError
+
+        nom = (request.data.get('nom') or '').strip()
+        num_chassis = (request.data.get('num_chassis') or '').strip()
+        telephone = request.data.get('telephone') or None
+        email = request.data.get('email') or None
+        modele = request.data.get('modele') or None
+
+        if not nom:
+            return Response({'error': 'Nom du client requis.'}, status=400)
+        if not num_chassis:
+            return Response({'error': 'Numéro de châssis requis.'}, status=400)
+
+        if Motos.objects.filter(num_chassis=num_chassis).exists():
+            return Response({'error': 'Ce numéro de châssis est déjà enregistré.'}, status=400)
+
+        try:
+            with transaction.atomic():
+                client = Clients.objects.create(
+                    nom=nom, telephone=telephone, email=email,
+                    created_at=timezone.now(),
+                )
+                moto = Motos.objects.create(
+                    client=client, num_chassis=num_chassis, modele=modele,
+                )
+        except IntegrityError:
+            return Response({'error': 'Ce numéro de châssis est déjà enregistré.'}, status=400)
+
+        return Response({
+            'client_id': client.id,
+            'nom': client.nom,
+            'telephone': client.telephone,
+            'email': client.email,
+            'moto_id': moto.id,
+            'num_chassis': moto.num_chassis,
+            'modele': moto.modele,
+        }, status=201)
 
     @action(detail=False, methods=['get'], url_path='search')
     def search_by_chassis(self, request):
@@ -457,10 +510,50 @@ class UtilisateurViewSet(viewsets.ModelViewSet):
     queryset = Utilisateurs.objects.all().order_by('nom')
     permission_classes = [IsAuthenticated, IsAdmin]
 
+    def get_permissions(self):
+        # mon-compte : self-service, ouvert à tout utilisateur authentifié
+        # (chacun ne peut modifier que son propre compte, voir plus bas).
+        if self.action == 'mon_compte':
+            return [IsAuthenticated()]
+        return super().get_permissions()
+
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
             return UtilisateurCreateSerializer
         return UtilisateurSerializer
+
+    # ── Action : changer ses propres identifiants (email / mot de passe) ─────
+    # Contrairement à l'édition d'un agent par un admin (update/partial_update
+    # ci-dessus, où l'admin agit sur le compte d'un tiers avec son propre
+    # privilège), ici l'utilisateur modifie SON PROPRE compte : on exige le
+    # mot de passe actuel pour confirmer, pour éviter qu'une session laissée
+    # ouverte permette de détourner le compte (admin y compris).
+    @action(detail=False, methods=['patch'], url_path='mon-compte')
+    def mon_compte(self, request):
+        user_id, _, _ = _get_user_from_token(request)
+        user = self.get_queryset().get(pk=user_id)
+
+        mot_de_passe_actuel = request.data.get('mot_de_passe_actuel', '')
+        if not mot_de_passe_actuel or not bcrypt.checkpw(
+            mot_de_passe_actuel.encode('utf-8'), user.mot_de_passe.encode('utf-8')
+        ):
+            return Response({'error': 'Mot de passe actuel incorrect.'}, status=400)
+
+        nouvel_email = request.data.get('email')
+        nouveau_mot_de_passe = request.data.get('nouveau_mot_de_passe')
+
+        if nouvel_email:
+            user.email = nouvel_email
+        if nouveau_mot_de_passe:
+            hashed = bcrypt.hashpw(nouveau_mot_de_passe.encode('utf-8'), bcrypt.gensalt(rounds=12))
+            user.mot_de_passe = hashed.decode('utf-8')
+
+        user.save(update_fields=['email', 'mot_de_passe'])
+
+        return Response({
+            'message': 'Identifiants mis à jour.',
+            'user': {'id': user.id, 'nom': user.nom, 'email': user.email, 'role': user.role},
+        }, status=200)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

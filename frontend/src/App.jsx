@@ -9,6 +9,8 @@ import Statistics from './pages/Statistics';
 import History from './pages/History';
 import Agents from './pages/Agents';
 import Tarification from './pages/Tarification';
+import Settings from './pages/Settings';
+import Clients from './pages/Clients';
 import './App.css';
 
 const AppContent = () => {
@@ -52,6 +54,10 @@ const AppContent = () => {
         return isAdmin ? <Agents /> : <Dashboard />;
       case 'tarification':
         return isAdmin ? <Tarification /> : <Dashboard />;
+      case 'settings':
+        return <Settings />;
+      case 'clients':
+        return isAdmin ? <Clients /> : <Dashboard />;
       case 'sessions':
       default:
         return <Dashboard />;

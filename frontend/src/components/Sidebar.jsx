@@ -8,8 +8,8 @@ import {
   LogOut,
   Settings,
   Users,
+  UserCircle,
   DollarSign,
-  FileText,
   X
 } from 'lucide-react';
 
@@ -123,7 +123,7 @@ const Sidebar = ({ activePage, setActivePage, isOpen, onClose }) => {
                 <span>Agents</span>
               </button>
 
-              <button 
+              <button
                 className={`sidebar-item btn-secondary ${activePage === 'tarification' ? 'active' : ''}`}
                 onClick={() => handleNav('tarification')}
               >
@@ -131,14 +131,12 @@ const Sidebar = ({ activePage, setActivePage, isOpen, onClose }) => {
                 <span>Tarification</span>
               </button>
 
-              <div className="sidebar-section-title">DONNÉES</div>
-
-              <button 
-                className={`sidebar-item btn-secondary ${activePage === 'reports' ? 'active' : ''}`}
-                onClick={() => handleNav('reports')}
+              <button
+                className={`sidebar-item btn-secondary ${activePage === 'clients' ? 'active' : ''}`}
+                onClick={() => handleNav('clients')}
               >
-                <FileText size={18} />
-                <span>Rapports</span>
+                <UserCircle size={18} />
+                <span>Clients</span>
               </button>
             </>
           )}
